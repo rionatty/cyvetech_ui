@@ -17,11 +17,16 @@
 	window.routes = [];
 	window.sounds = 0;
 	window.dialogs = [];
-	window.jq = {};
 	window.realtime = {};
+	window.route_handlers = [];
 
-	// just enough jQuery for $(document).on("app_ready", ...)
-	window.$ = (target) => ({ on: (event, fn) => ((window.jq[event] = window.jq[event] || []).push(fn)) });
+	// A clock, timers and page visibility that the test moves by hand.
+	window.clock = 1790000000000;
+	Date.now = () => window.clock;
+	window.intervals = [];
+	window.setInterval = (fn, ms) => window.intervals.push({ fn, ms });
+	window.visibility = "visible";
+	Object.defineProperty(document, "visibilityState", { configurable: true, get: () => window.visibility });
 
 	window.install_frappe = function (alerts_conf) {
 		window.frappe = make_frappe({ cyvetech_ui: { alerts: alerts_conf } });
@@ -30,8 +35,11 @@
 			if (method !== METHOD) return Promise.resolve();
 			return new Promise((resolve) => window.pending.push(() => resolve(window.answer_next)));
 		};
-		frappe.realtime = { on: (event, fn) => ((window.realtime[event] = window.realtime[event] || []).push(fn)) };
-		frappe.router = { on() {} };
+		frappe.realtime = {
+			socket: { connected: false }, // no socket.io server answering, until a test says otherwise
+			on: (event, fn) => ((window.realtime[event] = window.realtime[event] || []).push(fn)),
+		};
+		frappe.router = { on: (event, fn) => event === "change" && window.route_handlers.push(fn) };
 		frappe.set_route = (...route) => window.routes.push(route);
 		frappe.utils.play_sound = () => window.sounds++;
 		frappe.datetime = { prettyDate: () => "2 hours ago" };
@@ -69,7 +77,13 @@
 	const titles = () => popups().map((p) => (p.querySelector(".cvt-popup-title") || {}).textContent);
 	const popped = () => JSON.parse(localStorage.getItem("cyvetech_ui:popped:jane@example.com") || "[]");
 	const fire = (event) => (window.realtime[event] || []).forEach((fn) => fn({}));
-	const app_ready = () => (window.jq.app_ready || []).forEach((fn) => fn());
+	const run_timers = () => window.intervals.forEach((timer) => timer.fn());
+	const advance = (seconds) => (window.clock += seconds * 1000);
+	const change_route = () => window.route_handlers.forEach((fn) => fn());
+	const set_visibility = (state) => {
+		window.visibility = state;
+		document.dispatchEvent(new Event("visibilitychange"));
+	};
 
 	const T1 = {
 		kind: "assignment", key: "TODO-1", urgency: "overdue", when: "overdue by 8 days",
@@ -96,11 +110,16 @@
 	const N_READ = { kind: "notification", key: "NL-4", urgency: "none", unread: 0, created: "2026-09-20", title: "Old news", doctype: "Task", docname: "TASK-9" };
 
 	(async function () {
-		// ── first visit ────────────────────────────────────────────────
+		// ── the desk starting, the way Frappe v16 starts it ────────────
+		check("while the page's scripts run, Frappe has no session user yet", !frappe.session.user, frappe.session);
 		check("nothing is built before the desk is up", !document.querySelector(".cvt-alerts"), "built early");
-		app_ready();
+		check("nothing is asked for before the desk is up", loads() === 0, loads());
+		start_desk();
 		check("the panel is built once the desk is up", !!document.querySelector(".cvt-alerts"), "no panel");
+		check("and the signed-in user's alerts are asked for", loads() === 1, loads());
 		check("it listens for new notifications", (window.realtime.notification || []).length === 1, window.realtime);
+
+		// ── first visit ────────────────────────────────────────────────
 		await answer({ alerts: [A_URGENT, T1, N1, A_NORMAL, N_READ], total: 4, band: "overdue" });
 
 		const badge = document.querySelector(".cvt-alerts-count");
@@ -135,8 +154,8 @@
 		check("nothing active survives in the Urgent message",
 			!/onerror|<script|javascript:/i.test(urgent.html) && !window.__xss2 && !window.__xss3, urgent.html);
 		check("it offers to open the document it is about", urgent.opts.secondary_action_label === "Open", urgent.opts.secondary_action_label);
-		check("popped alerts are remembered; the Urgent one not until acknowledged",
-			popped().includes("NL-2") && !popped().includes("NL-3"), popped());
+		check("popped alerts are remembered, for the signed-in user; the Urgent one not until acknowledged",
+			popped().includes("NL-2") && !popped().includes("NL-3"), [popped(), Object.keys(localStorage)]);
 
 		urgent.opts.primary_action();
 		await tick();
@@ -206,6 +225,71 @@
 		check("taken out of the page, the panel comes straight back", !!panel_el(), "gone");
 		check("and comes back as it was left", panel_el().classList.contains("cvt-alerts-collapsed"), "open");
 		check("with its rows", document.querySelectorAll(".cvt-alert").length === 2, document.querySelectorAll(".cvt-alert").length);
+
+		// ── keeping up when the realtime socket is not connected ───────
+		let mark = loads();
+		const since = () => loads() - mark;
+		const reset = () => (mark = loads());
+		check("a timer looks every 15 seconds whether a load is due", window.intervals.length === 1 && window.intervals[0].ms === 15000, window.intervals);
+		advance(30);
+		run_timers();
+		check("no socket: nothing is asked for before a minute has passed", since() === 0, since());
+		advance(30);
+		run_timers();
+		check("no socket: after a minute it loads by itself", since() === 1, since());
+		const A_POLLED = { ...A_NORMAL, key: "NL-40", title: "Found by the poll", created: "2026-09-28 11:00:00" };
+		document.querySelectorAll(".cvt-popup").forEach((p) => p.remove());
+		await answer({ alerts: [T1, T2, A_POLLED], total: 3, band: "overdue" });
+		check("an alert the poll found pops up like any other", titles().includes("Found by the poll"), titles());
+
+		reset();
+		set_visibility("hidden");
+		advance(10 * 60);
+		run_timers();
+		check("a page out of view never polls", since() === 0, since());
+		set_visibility("visible");
+		check("coming back to the page loads at once", since() === 1, since());
+		await answer({ alerts: [T1, T2, A_POLLED], total: 3, band: "overdue" });
+
+		reset();
+		set_visibility("hidden");
+		advance(5);
+		set_visibility("visible");
+		check("but not again within 15 seconds", since() === 0, since());
+		advance(20);
+		window.dispatchEvent(new Event("focus"));
+		check("the window coming back into focus catches up too", since() === 1, since());
+		await answer({ alerts: [T1, T2, A_POLLED], total: 3, band: "overdue" });
+
+		reset();
+		advance(20);
+		change_route();
+		check("so does moving to another page of the desk", since() === 1, since());
+		await answer({ alerts: [T1, T2, A_POLLED], total: 3, band: "overdue" });
+		reset();
+		change_route();
+		check("but not straight after a load", since() === 0, since());
+
+		// ── with the realtime socket connected, news arrives by itself ──
+		frappe.realtime.socket.connected = true;
+		reset();
+		advance(2 * 60);
+		run_timers();
+		check("socket connected: the minute poll stops", since() === 0, since());
+		advance(3 * 60);
+		run_timers();
+		check("socket connected: a slow poll every five minutes takes its place", since() === 1, since());
+		await answer({ alerts: [T1, T2, A_POLLED], total: 3, band: "overdue" });
+
+		// the settings page's Send Me a Test Alert asks straight away
+		reset();
+		cyvetech_ui.reload_alerts();
+		check("reload_alerts loads at once", since() === 1, since());
+		await answer({ alerts: [T1, T2, A_POLLED], total: 3, band: "overdue" });
+
+		const status = cyvetech_ui.alerts_status();
+		check("the console status says who, and whether the socket is connected",
+			status.user === "jane@example.com" && status.started && status.panel && status.realtime === true && status.listed === 3, status);
 
 		// ── the next visit, in a page of its own (the same browser storage) ──
 		const frame = document.createElement("iframe");

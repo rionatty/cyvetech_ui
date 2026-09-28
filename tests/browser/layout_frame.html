@@ -1,0 +1,120 @@
+<!doctype html>
+<html lang="en" dir="ltr" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0"><!-- as on the desk -->
+<title>layout tests: one window width</title>
+<!--
+	Opened by layout.html at a desktop width and at a phone width: My Alerts
+	(the app's real script and stylesheet) and Frappe's Getting Started
+	checklist, which Frappe fixes to the same bottom-right corner.
+-->
+<style>
+	*, *::before, *::after { box-sizing: border-box; } /* Bootstrap's reboot, as on the desk */
+	body { margin: 0; font: 13px system-ui; }
+	/* the checklist's own position and size (frappe/public/js/frappe/ui/user_onboarding/user_onboarding.bundle.js) */
+	.onb-panel {
+		position: fixed; inset-inline-end: 20px; bottom: 24px; width: 310px; max-height: 80vh;
+		background: #fff; border-radius: 8px; box-shadow: 0 12px 40px rgba(0,0,0,0.15); padding: 16px;
+		z-index: 1000; display: flex; flex-direction: column; overflow-y: auto;
+	}
+	.onb-panel .steps { height: 260px; }
+</style>
+<script src="harness.js"></script>
+<script>load_app_file("/cyvetech_ui/public/css/cyvetech_ui.css")</script>
+<script>
+	const METHOD = "cyvetech_ui.cyvetech_ui.alerts.my_alerts";
+	window.pending = [];
+	window.frappe = make_frappe({ cyvetech_ui: { alerts: { panel: 1, popup: 0, seconds: 3, sound: 0 } } });
+	frappe.xcall = (method) => (method === METHOD ? new Promise((resolve) => window.pending.push(resolve)) : Promise.resolve());
+	frappe.realtime = { on() {} };
+	frappe.router = { on() {} };
+	frappe.datetime = { prettyDate: () => "just now" };
+	frappe.user = { full_name: (user) => user };
+	localStorage.removeItem("cyvetech_ui:alerts_collapsed");
+</script>
+<script>load_app_file("/cyvetech_ui/public/js/cyvetech_ui_alerts.js")</script>
+</head>
+<body>
+<div class="main-section" id="page">The page</div>
+<div class="body-sidebar-container"><div class="user-onboarding" id="mount"></div></div>
+<script>
+	const tick = () => new Promise((r) => setTimeout(r, 0));
+	const box = (selector) => document.querySelector(selector).getBoundingClientRect();
+	const overlap = (a, b) => a.left < b.right && b.left < a.right && a.top < b.bottom && b.top < a.bottom;
+	const inside = (r) => r.left >= 0 && r.top >= 0 && r.right <= innerWidth && r.bottom <= innerHeight;
+	const at = (r) => [r.left, r.top, r.right, r.bottom].map(Math.round).join(",");
+	const near = (value, expected) => Math.abs(value - expected) <= 1; // a scaled window lands on fractions of a pixel
+	let W, H, side_by_side, margin;
+
+	function shrink(shrunk) {
+		const panel = document.querySelector(".cvt-alerts");
+		if (panel.classList.contains("cvt-alerts-collapsed") !== shrunk) panel.querySelector(".cvt-alerts-head").click();
+	}
+
+	(async function () {
+		// a frame or tab that is not drawn yet has no size: wait for one
+		await new Promise((resolve) => {
+			const started = Date.now();
+			const wait = () => (innerWidth > 0 || Date.now() - started > 3000 ? resolve() : setTimeout(wait, 50));
+			wait();
+		});
+		[W, H] = [innerWidth, innerHeight];
+		side_by_side = W >= 720;
+		margin = W >= 768 ? 20 : 12;
+		if (!W || !H) throw new Error("the window has no size to lay things out in");
+
+		start_desk();
+		const rows = [1, 2, 3, 4].map((i) => ({
+			kind: "assignment", key: `TODO-${i}`, urgency: "soon", when: "due in 3 days",
+			title: `Task ${i}`, doctype: "ToDo", docname: `TODO-${i}`, created: "2026-09-28 09:00:00",
+		}));
+		window.pending.shift()({ alerts: rows, total: 4, band: "soon" });
+		await tick();
+		await tick();
+
+		const alone = box(".cvt-alerts");
+		check(`${W}px: My Alerts sits in the bottom-right corner`,
+			near(W - alone.right, margin) && near(H - alone.bottom, margin), at(alone));
+		check(`${W}px: the page leaves room under its last lines`, css("#page", "padding-bottom") === "72px", css("#page", "padding-bottom"));
+
+		// Frappe opens the checklist
+		document.getElementById("mount").innerHTML = '<div class="onb-panel"><b>Getting Started</b><div class="steps"></div></div>';
+		for (const shrunk of side_by_side ? [false, true] : [true]) {
+			shrink(shrunk);
+			const a = box(".cvt-alerts");
+			const o = box(".onb-panel");
+			const state = shrunk ? "shrunk" : "open";
+			check(`${W}px, checklist open, My Alerts ${state}: they do not cover each other`, !overlap(a, o), { alerts: at(a), checklist: at(o) });
+			check(`${W}px, checklist open, My Alerts ${state}: both are in the window`, inside(a) && inside(o), { alerts: at(a), checklist: at(o) });
+		}
+		const a = box(".cvt-alerts");
+		const o = box(".onb-panel");
+		if (side_by_side) {
+			check(`${W}px: My Alerts moves over to sit beside the checklist`, near(o.left - a.right, 16), { alerts: at(a), checklist: at(o) });
+
+			// in a right-to-left language, both take the bottom-left corner
+			document.documentElement.dir = "rtl";
+			const ra = box(".cvt-alerts");
+			const ro = box(".onb-panel");
+			check(`${W}px, right to left: My Alerts sits beside the checklist in the other corner`,
+				near(ro.left, 20) && near(ra.left - ro.right, 16), { alerts: at(ra), checklist: at(ro) });
+			document.documentElement.dir = "ltr";
+		} else {
+			check(`${W}px: the checklist moves up above My Alerts`, o.bottom <= a.top, { alerts: at(a), checklist: at(o) });
+		}
+
+		// the checklist is closed
+		document.getElementById("mount").innerHTML = "";
+		const back = box(".cvt-alerts");
+		check(`${W}px: with the checklist closed, My Alerts goes back to the corner`, near(W - back.right, margin), at(back));
+
+		localStorage.removeItem("cyvetech_ui:alerts_collapsed");
+		report();
+	})().catch((error) => {
+		check("the test ran to the end", false, String((error && error.stack) || error));
+		report();
+	});
+</script>
+</body>
+</html>

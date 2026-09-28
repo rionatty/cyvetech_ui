@@ -11,7 +11,7 @@
 {% block head_include %}
 {{ super() }}
 {%- if cvt and cvt.enabled %}
-<link rel="stylesheet" href="/assets/cyvetech_ui/css/cyvetech_ui_login.css?v={{ cvt.version }}">
+<link rel="stylesheet" href="{{ cvt.stylesheet }}">
 <style>
 	:root {
 	{%- for variable, color in cvt.colors.items() %}

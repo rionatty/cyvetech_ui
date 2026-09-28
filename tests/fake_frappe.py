@@ -224,6 +224,17 @@ def install():
 	fake.clear_cache = lambda *a, **k: fake.cleared.append("all")
 	fake.clear_document_cache = lambda doctype, name=None: fake.cleared.append(f"doc:{doctype}")
 	fake.log_error = lambda *a, **k: fake.errors.append(k.get("title") or (a[0] if a else ""))
+
+	class Logger:
+		"""frappe.logger(module): what was logged, kept on this fake."""
+
+		def __init__(self, module):
+			self.module = module
+
+		def exception(self, message, *args):
+			fake.logged.append((self.module, message % args if args else message))
+
+	fake.logger = lambda module=None, *a, **k: Logger(module)
 	fake.msgprint = lambda *a, **k: fake.messages.append(a[0] if a else k.get("msg"))
 	fake.enqueue = lambda fn, **kwargs: fake.enqueued.append((fn, kwargs))
 	fake.db = FakeDB(fake)
@@ -264,6 +275,7 @@ def reset(fake):
 	fake.queries = []
 	fake.cleared = []
 	fake.errors = []
+	fake.logged = []
 	fake.messages = []
 	fake.enqueued = []
 	fake.inserted = []

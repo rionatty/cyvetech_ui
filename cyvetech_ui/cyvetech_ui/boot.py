@@ -33,7 +33,21 @@ def boot_session(bootinfo):
 			bootinfo.app_logo_url = settings.brand_logo
 	except Exception:
 		# the desk loads plain rather than not at all
+		log_failure()
 		bootinfo.cyvetech_ui = {"version": __version__}
+
+
+def log_failure():
+	"""Why the theme and My Alerts are missing, in logs/cyvetech_ui.log.
+
+	A log file rather than an Error Log: this runs on every page load.
+	"""
+	try:
+		frappe.logger("cyvetech_ui").exception(
+			"The desk boot failed; the desk loads without CyveTech UI's theme and alerts"
+		)
+	except Exception:
+		pass
 
 
 def payload(settings, hidden_modules):

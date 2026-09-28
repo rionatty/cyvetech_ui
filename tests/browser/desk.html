@@ -7,15 +7,19 @@
 <!--
 	The parts of Frappe v16's desk stylesheet that the theme works through,
 	copied with their variables (frappe/public/scss/desk/sidebar.scss,
-	desk/desktop.scss, espresso/_colors.scss, common/css_variables.scss).
+	desk/notification.scss, desk/desktop.scss, espresso/_colors.scss,
+	espresso/_typography.scss, common/css_variables.scss), and the Getting
+	Started checklist's own styles (ui/user_onboarding/user_onboarding.bundle.js).
 -->
 <style>
 	:root {
-		--gray-200: #ededed; --gray-600: #7c7c7c; --gray-700: #525252; --gray-800: #383838; --gray-900: #171717;
+		--gray-100: #f3f3f3; --gray-200: #ededed; --gray-600: #7c7c7c; --gray-700: #525252; --gray-800: #383838; --gray-900: #171717;
 		--surface-menu-bar: #f8f8f8; --sidebar-hover-color: #f3f3f3; --sidebar-active-color: #ffffff;
 		--sidebar-border-color: #ededed; --ink-gray-4: #999999; --ink-gray-5: #7c7c7c; --ink-gray-6: #525252;
-		--ink-gray-7: #525252; --ink-gray-8: #383838; --ink-gray-9: #171717; --text-color: var(--gray-800);
-		--text-muted: var(--gray-700); --bg-color: white; --card-bg: white; --border-color: var(--gray-200);
+		--ink-gray-7: #525252; --ink-gray-8: #383838; --ink-gray-9: #171717;
+		--heading-color: var(--gray-900); --text-color: var(--gray-800); --text-muted: var(--gray-700); --text-light: var(--gray-600);
+		--bg-color: white; --fg-color: white; --card-bg: var(--fg-color); --fg-hover-color: var(--gray-100);
+		--border-color: var(--gray-200); --primary-color: var(--gray-900);
 		--border-radius-lg: 12px; --icon-stroke: var(--gray-800);
 	}
 	html, body { background-color: var(--bg-color); margin: 0; font: 13px system-ui; }
@@ -27,9 +31,32 @@
 	.item-anchor { display: block; padding: 6px 8px; color: var(--ink-gray-6); text-decoration: none; }
 	.sidebar-item-container:hover { background: var(--sidebar-hover-color); }
 	.active-sidebar { background: var(--sidebar-active-color); border-radius: 8px; }
-	.notifications-list { background: #ffffff; border: 1px solid #ddd; padding: 8px; margin-top: 8px; color: var(--text-color); }
-	.notification-item { color: var(--text-color); }
 	.icon { width: 16px; height: 16px; stroke: var(--icon-stroke); fill: none; }
+	.text-muted { color: var(--text-muted) !important; }
+	.text-ink-gray-7 { color: var(--ink-gray-7); }
+	.text-ink-gray-8 { color: var(--ink-gray-8); }
+
+	/* the bell's panel: absolute beside the sidebar in Frappe; in the flow here */
+	.notifications-list { width: 360px; background-color: var(--bg-color); margin-top: 8px; }
+	.notifications-list .notification-list-header { display: flex; justify-content: space-between; margin: 0 10px; border-bottom: 1px solid var(--border-color); }
+	.notification-item-tabs { display: flex; margin: 0; padding: 0; list-style: none; }
+	.notification-item-tabs .notifications-category { padding: 8px 0; margin-right: 16px; color: var(--text-light); }
+	.notification-item-tabs .notifications-category.active { color: var(--text-color); border-bottom: 1px solid var(--primary-color); }
+	.recent-item { display: flex; padding: 10px; color: var(--text-light); text-decoration: none; }
+	.recent-item:not(.no-hover):hover { color: var(--text-muted); background-color: var(--fg-hover-color); }
+	.notification-body { display: flex; gap: 10px; }
+
+	/* the Getting Started checklist: fixed to the corner in Frappe; in the
+	   flow here (layout.html checks the corner) */
+	.onb-panel { width: 310px; background: #fff; border-radius: 8px; padding: 16px; margin-top: 12px; }
+	.onb-panel .text-base { font-size: 14px; color: #050505; }
+	.onb-skip { color: #6b7280; }
+	.onb-group { padding: 4px 8px; border-radius: 8px; }
+	.onb-group:hover { background: #f5f5f5; }
+	.onb-progress-badge { background: #FDFAED; color: #DB7706; padding: 4px 10px; border-radius: 999px; }
+	/* a white card Frappe might add to the sidebar's container one day */
+	.future-card { background: #fff; color: var(--text-color); padding: 8px; }
+
 	.main { flex: 1; padding: 16px; }
 	.widgets { display: flex; gap: 12px; }
 	.widget { border-radius: var(--border-radius-lg); background-color: var(--card-bg); border: 1px solid var(--border-color); padding: 12px; width: 160px; }
@@ -38,16 +65,39 @@
 	.desktop-container .icon-container { width: 54px; height: 54px; margin: auto; border-radius: 16px; overflow: hidden; background: #2f64b0; }
 	.desktop-navbar { height: 44px; background: var(--bg-color); border-bottom: 1px solid var(--border-color); }
 </style>
-<!-- Stock Addon's theme, as far as it fights this app (stock_addon.bundle.css). -->
-<style id="hostile" media="not all">
-	:root { --agri-shell: #3A5F86; --agri-shell-text: #EAF1FA; --agri-shell-marker: #F0AB00; --agri-primary-dark: #0A2540; --agri-radius: 4px; --agri-wash: #F5F8FC; }
+<!-- Stock Addon's theme, as far as it reaches into the sidebar (stock_addon.bundle.css). -->
+<style id="stock-addon" media="not all">
+	:root { --agri-shell: #3A5F86; --agri-shell-dark: #2E4C6B; --agri-shell-text: #EAF1FA; --agri-shell-muted: #C5D6EC; --agri-shell-marker: #F0AB00;
+		--agri-primary-dark: #0A2540; --agri-ink: #1A2733; --agri-border: #C3D0E0; --agri-radius: 4px; --agri-wash: #F5F8FC; }
 	html:not([data-theme="dark"]) .body-sidebar, html:not([data-theme="dark"]) .body-sidebar-container { background: var(--agri-shell) !important; }
 	html:not([data-theme="dark"]) .body-sidebar-container * { background-color: transparent !important; }
-	html:not([data-theme="dark"]) .body-sidebar-container, html:not([data-theme="dark"]) .body-sidebar-container * { color: var(--agri-shell-text) !important; }
+	html:not([data-theme="dark"]) .body-sidebar-container, html:not([data-theme="dark"]) .body-sidebar-container *,
+	html:not([data-theme="dark"]) .body-sidebar, html:not([data-theme="dark"]) .body-sidebar * { color: var(--agri-shell-text) !important; border-color: rgba(255,255,255,.12) !important; }
+	html:not([data-theme="dark"]) .body-sidebar-container, html:not([data-theme="dark"]) .body-sidebar { --icon-stroke: var(--agri-shell-text); --icon-fill: transparent; }
+	html:not([data-theme="dark"]) .body-sidebar-container .icon use { stroke: var(--agri-shell-text) !important; }
+	html:not([data-theme="dark"]) .body-sidebar-container .text-muted, html:not([data-theme="dark"]) .body-sidebar-container small { color: var(--agri-shell-muted) !important; }
+	html:not([data-theme="dark"]) .body-sidebar-container .sidebar-item-container.selected { background-color: var(--agri-shell-marker) !important; }
 	html:not([data-theme="dark"]) .body-sidebar-container .sidebar-item-container.selected * { color: var(--agri-primary-dark) !important; }
+	html:not([data-theme="dark"]) .body-sidebar-container .dropdown-menu, html:not([data-theme="dark"]) .body-sidebar-container .dropdown-menu * { color: var(--agri-ink) !important; }
+	html:not([data-theme="dark"]) .body-sidebar-container .dropdown-menu { background-color: #FFFFFF !important; }
 	.widget.number-widget-box { border-radius: var(--agri-radius) !important; }
 	html.sa-cockpit:not([data-theme="dark"]) .page-container[data-page-route="Workspaces"] .widget.links-widget-box { border-radius: var(--agri-radius) !important; }
 	html:not([data-theme="dark"]) .layout-main-section { background: var(--agri-wash) !important; }
+</style>
+<!-- HRMS Addon's theme: the same rules on --hra-*, with the bell's panel already left out (hrms_addon.bundle.css). -->
+<style id="hrms-addon" media="not all">
+	:root { --hra-shell: #3A5F86; --hra-shell-text: #EAF1FA; --hra-shell-muted: #C5D6EC; --hra-ink: #1A2733; --hra-ink-muted: #546678; --hra-border: #C3D0E0; }
+	html:not([data-theme="dark"]) .body-sidebar, html:not([data-theme="dark"]) .body-sidebar-container { background: var(--hra-shell) !important; }
+	html:not([data-theme="dark"]) .body-sidebar-container *:not(:where(.notifications-list, .notifications-list *)) { background-color: transparent !important; }
+	html:not([data-theme="dark"]) .body-sidebar-container, html:not([data-theme="dark"]) .body-sidebar-container *:not(:where(.notifications-list, .notifications-list *)),
+	html:not([data-theme="dark"]) .body-sidebar, html:not([data-theme="dark"]) .body-sidebar *:not(:where(.notifications-list, .notifications-list *)) { color: var(--hra-shell-text) !important; border-color: rgba(255,255,255,.12) !important; }
+	html:not([data-theme="dark"]) .body-sidebar-container, html:not([data-theme="dark"]) .body-sidebar { --icon-stroke: var(--hra-shell-text); --icon-fill: transparent; }
+	html:not([data-theme="dark"]) .body-sidebar-container .icon use { stroke: var(--hra-shell-text) !important; }
+	html:not([data-theme="dark"]) .body-sidebar-container .notifications-list { background-color: var(--card-bg, #FFFFFF) !important; --icon-stroke: var(--hra-ink); }
+	html:not([data-theme="dark"]) .body-sidebar-container .notifications-list, html:not([data-theme="dark"]) .body-sidebar-container .notifications-list * { color: var(--hra-ink) !important; border-color: var(--hra-border) !important; }
+	html:not([data-theme="dark"]) .body-sidebar-container .notifications-list .text-muted, html:not([data-theme="dark"]) .body-sidebar-container .notifications-list .notification-timestamp { color: var(--hra-ink-muted) !important; }
+	html:not([data-theme="dark"]) .body-sidebar-container .text-muted, html:not([data-theme="dark"]) .body-sidebar-container small { color: var(--hra-shell-muted) !important; }
+	html:not([data-theme="dark"]) .body-sidebar-container .sidebar-item-container.selected * { color: #0A2540 !important; }
 </style>
 <script src="harness.js"></script>
 <script>load_app_file("/cyvetech_ui/public/css/cyvetech_ui.css")</script>
@@ -83,8 +133,37 @@
 <body>
 <header class="desktop-navbar"></header>
 <div class="layout">
+	<!-- frappe/public/js/frappe/ui/sidebar/sidebar.html, with the panels Frappe fills in -->
 	<div class="body-sidebar-container">
 		<div class="body-sidebar">
+			<div class="standard-items-sections">
+				<div class="dropdown-notifications">
+					<div class="notifications-list" role="menu" id="bell-panel">
+						<div class="notification-list-header" id="bell-header">
+							<div class="header-items">
+								<ul class="notification-item-tabs nav nav-tabs" role="tablist">
+									<li class="notifications-category active" id="bell-tab">Notifications</li>
+									<li class="notifications-category" id="bell-tab-events">Events</li>
+								</ul>
+							</div>
+							<div class="header-actions"><span class="mark-all-read"><svg class="icon" id="bell-icon"><use></use></svg></span></div>
+						</div>
+						<div class="notification-list-body">
+							<div class="panel-notifications">
+								<a class="recent-item notification-item unread" href="#" id="bell-item">
+									<div class="notification-body">
+										<div class="message">
+											<div id="bell-message"><b class="subject-title">Jane</b> mentioned you on SO-0001</div>
+											<div class="notification-timestamp text-muted" id="bell-time">2 hours ago</div>
+										</div>
+									</div>
+									<div class="mark-as-read"></div>
+								</a>
+							</div>
+						</div>
+					</div>
+				</div>
+			</div>
 			<a class="sidebar-header"><div class="title-container">
 				<div class="sidebar-item-label header-title">Selling</div>
 				<div class="sidebar-item-label header-subtitle">ERPNext</div>
@@ -92,8 +171,21 @@
 			<div class="sidebar-item-container"><a class="item-anchor" id="plain-item" href="#"><svg class="icon"><use></use></svg> Quotation</a></div>
 			<div class="sidebar-item-container active-sidebar selected" id="active"><a class="item-anchor" id="active-item" href="#">Sales Order</a></div>
 			<div class="sidebar-item-container"><a class="item-anchor" href="#">Sales Invoice</a></div>
-			<div class="dropdown-notifications">
-				<div class="notifications-list"><div class="notification-item" id="note">You were mentioned on SO-0001</div></div>
+		</div>
+		<div class="future-card" id="future-card">A card of Frappe's, beside the sidebar</div>
+		<div class="user-onboarding">
+			<div class="onb-panel" id="onb-panel">
+				<div class="header onb-header-main"><div class="text-base font-medium" id="onb-title">Getting Started</div></div>
+				<div class="onb-progress-row">
+					<div class="onb-progress-badge" id="onb-badge">33% completed</div>
+					<span class="onb-skip" id="onb-skip">Skip All</span>
+				</div>
+				<div class="onb-steps">
+					<div class="onb-group w-full step-title flex items-center text-ink-gray-8 onb-select-cursor" id="onb-step">
+						<div class="onb-step-left"><div class="text-base onb-step-text" id="onb-step-text">Create your first Quotation</div></div>
+						<div class="ml-auto onb-show-on-hover text-sm"><span class="text-ink-gray-7" id="onb-step-action">Skip</span></div>
+					</div>
+				</div>
 			</div>
 		</div>
 	</div>
@@ -118,7 +210,7 @@
 <script>
 	const NAVY = "rgb(22, 51, 94)", GOLD = "rgb(234, 165, 26)", WHITE = "rgb(255, 255, 255)", INK = "rgb(17, 24, 39)";
 
-	function scenario(name) {
+	function sidebar(name) {
 		check(`${name}: sidebar is the chosen color`, css(".body-sidebar", "background-color") === NAVY, css(".body-sidebar", "background-color"));
 		check(`${name}: menu items read white on it`, css("#plain-item", "color") === WHITE, css("#plain-item", "color"));
 		check(`${name}: selected item is the highlight`, css("#active", "background-color") === GOLD, css("#active", "background-color"));
@@ -128,15 +220,42 @@
 		check(`${name}: link card is rounded`, css("#links", "border-top-left-radius") === "16px", css("#links", "border-top-left-radius"));
 	}
 
+	// Frappe's white panels in the sidebar's container: a solid white card
+	// each, every line of text in dark ink that reads on it.
+	function panels(name) {
+		const reads = (selector, ratio) => {
+			const got = contrast(css(selector, "color"), WHITE);
+			check(`${name}: ${selector} reads on its panel (${ratio}:1 or better)`, got >= ratio, `${css(selector, "color")} at ${got.toFixed(2)}:1`);
+		};
+		check(`${name}: the bell's panel is a solid white card`, css("#bell-panel", "background-color") === WHITE, css("#bell-panel", "background-color"));
+		reads("#bell-message", 4);
+		reads("#bell-time", 4.5);
+		reads("#bell-tab", 4.5);
+		check(`${name}: the bell's icons are dark`, contrast(css("#bell-icon", "stroke"), WHITE) >= 4.5, css("#bell-icon", "stroke"));
+		check(`${name}: the line under the bell's header shows`, css("#bell-header", "border-bottom-color") === "rgb(237, 237, 237)", css("#bell-header", "border-bottom-color"));
+		check(`${name}: the open tab is underlined in Frappe's primary color`, css("#bell-tab", "border-bottom-color") === "rgb(23, 23, 23)", css("#bell-tab", "border-bottom-color"));
+
+		check(`${name}: the Getting Started checklist is a solid white card`, css("#onb-panel", "background-color") === WHITE, css("#onb-panel", "background-color"));
+		reads("#onb-title", 4.5);
+		reads("#onb-step-text", 4.5);
+		reads("#onb-step-action", 4.5);
+		reads("#onb-skip", 4.5);
+		check(`${name}: the checklist's progress badge keeps its color`,
+			css("#onb-badge", "background-color") === "rgb(253, 250, 237)" && css("#onb-badge", "color") === "rgb(219, 119, 6)",
+			[css("#onb-badge", "background-color"), css("#onb-badge", "color")]);
+	}
+
 	const root = document.documentElement;
 	check("theme classes are on <html>", ["cvt-theme", "cvt-top-bar", "cvt-rounded"].every((c) => root.classList.contains(c)), root.className);
 	const vars = document.getElementById("cvt-theme-vars").textContent;
 	check("a tampered value never reaches the stylesheet", !vars.includes("display") && !vars.includes("evil"), vars);
 	check("a variable that is not ours never reaches it", !vars.includes("--not-ours"), vars);
 
-	scenario("plain v16");
-	check("sidebar icons are stroked in the text color", css(".body-sidebar .icon", "stroke") === WHITE, css(".body-sidebar .icon", "stroke"));
-	check("the notifications list inside the sidebar keeps dark text", css("#note", "color") === "rgb(56, 56, 56)", css("#note", "color"));
+	sidebar("plain v16");
+	panels("plain v16");
+	check("the sidebar's colors stop at the sidebar: a card beside it in its container keeps dark text",
+		css("#future-card", "color") === "rgb(56, 56, 56)", css("#future-card", "color"));
+	check("sidebar icons are stroked in the text color", css("#plain-item .icon", "stroke") === WHITE, css("#plain-item .icon", "stroke"));
 	check("the central area is the page color", css("body", "background-color") === "rgb(244, 246, 250)", css("body", "background-color"));
 	check("the desktop's top bar takes the sidebar's deeper shade", css(".desktop-navbar", "background-color") === "rgb(19, 45, 83)", css(".desktop-navbar", "background-color"));
 	check("chart card is rounded", css("#chart", "border-top-left-radius") === "16px", css("#chart", "border-top-left-radius"));
@@ -155,10 +274,18 @@
 
 	// Stock Addon's theme switched on
 	root.classList.add("sa-cockpit");
-	document.getElementById("hostile").media = "all";
-	scenario("beside Stock Addon's theme");
+	document.getElementById("stock-addon").media = "all";
+	sidebar("beside Stock Addon's theme");
+	panels("beside Stock Addon's theme");
 	check("beside Stock Addon's theme: its page wash is the chosen page color", css(".layout-main-section", "background-color") === "rgb(244, 246, 250)", css(".layout-main-section", "background-color"));
-	document.getElementById("hostile").media = "not all";
+	document.getElementById("stock-addon").media = "not all";
+	root.classList.remove("sa-cockpit");
+
+	// HRMS Addon's theme switched on
+	document.getElementById("hrms-addon").media = "all";
+	sidebar("beside HRMS Addon's theme");
+	panels("beside HRMS Addon's theme");
+	document.getElementById("hrms-addon").media = "not all";
 
 	// dark mode keeps Frappe's own colors
 	root.setAttribute("data-theme", "dark");
@@ -169,6 +296,8 @@
 	// switching the theme off takes every trace away
 	cyvetech_ui.apply_theme({ enabled: 0, rounded: 0, vars: {} });
 	check("theme off: the sidebar is Frappe's again", css(".body-sidebar", "background-color") === "rgb(248, 248, 248)", css(".body-sidebar", "background-color"));
+	check("theme off: the bell's panel is Frappe's again", css("#bell-panel", "background-color") === WHITE && css("#bell-message", "color") === "rgb(124, 124, 124)",
+		[css("#bell-panel", "background-color"), css("#bell-message", "color")]);
 	check("theme off: cards have Frappe's radius", css("#number", "border-top-left-radius") === "12px", css("#number", "border-top-left-radius"));
 	check("theme off: its style block is gone", !document.getElementById("cvt-theme-vars"), "still there");
 

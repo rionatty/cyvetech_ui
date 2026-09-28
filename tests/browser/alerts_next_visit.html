@@ -13,9 +13,7 @@
 	const METHOD = "cyvetech_ui.cyvetech_ui.alerts.my_alerts";
 	window.pending = [];
 	window.dialogs = [];
-	window.jq = {};
 	window.realtime = {};
-	window.$ = () => ({ on: (event, fn) => ((window.jq[event] = window.jq[event] || []).push(fn)) });
 	window.frappe = make_frappe({ cyvetech_ui: { alerts: { panel: 0, popup: 0, seconds: 3, sound: 0 } } });
 	frappe.xcall = (method) =>
 		method === METHOD ? new Promise((resolve) => window.pending.push(resolve)) : Promise.resolve();
@@ -50,7 +48,7 @@
 	});
 
 	(async function () {
-		(window.jq.app_ready || []).forEach((fn) => fn());
+		start_desk();
 		await answer({
 			alerts: [alert_of("NL-3", "Server maintenance tonight", "Urgent"), alert_of("NL-2", "Stock count on Friday", "Normal"), alert_of("NL-20", "Sent while you were away", "Normal")],
 			total: 3, band: "overdue",

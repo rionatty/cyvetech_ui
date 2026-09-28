@@ -8,10 +8,7 @@
 // cyvetech_ui.cyvetech_ui.alerts.my_alerts, which only ever reads the
 // session user's own records.
 //
-// POP-UPS. Frappe publishes "notification" to a user the moment a
-// Notification Log is created for them — every assignment, mention, share
-// and sent alert creates one — so that single event is the cue to reload.
-// Whatever is new since the last answer pops up:
+// POP-UPS. Whatever is new since the last answer pops up:
 //
 //   * an alert an administrator sent, always. Normal ones close by
 //     themselves; Important ones stay until closed; Urgent ones open a
@@ -19,31 +16,45 @@
 //     away pops up the next time they open the desk.
 //   * any other new notification or assignment, if the settings say so.
 //
-// A slow poll runs as well, for a task whose due date passes while the page
-// is open: nothing is published for that.
+// KEEPING UP. Frappe publishes "notification" to a user the moment a
+// Notification Log is created for them — every assignment, mention, share
+// and sent alert creates one — so that event is the cue to reload at once.
+// It travels over the site's socket.io server, which is not always running
+// or reachable, so the list is also reloaded:
+//
+//   * every minute while the page is in view and the realtime socket is not
+//     connected, every five minutes while it is (for a task whose due date
+//     passes while the page is open: nothing is published for that);
+//   * on coming back to the page or moving to another page of the desk, if
+//     the last load is more than 15 seconds old.
+//
+// A page out of view never polls.
 
 (function () {
 	if (typeof frappe === "undefined" || !frappe.boot) return;
-	if (!frappe.session || !frappe.session.user || frappe.session.user === "Guest") return;
 	frappe.provide("cyvetech_ui");
 
 	const conf = (frappe.boot.cyvetech_ui || {}).alerts || {};
-	const USER = frappe.session.user;
 	const METHOD = "cyvetech_ui.cyvetech_ui.alerts.my_alerts";
 	const MARK_READ = "frappe.desk.doctype.notification_log.notification_log.mark_as_read";
 	const MARK_ALL_READ = "frappe.desk.doctype.notification_log.notification_log.mark_all_as_read";
-	const POLL_MS = 5 * 60 * 1000;
+	const TICK_MS = 15 * 1000; // how often to see whether a load is due (no request)
+	const POLL_MS = 60 * 1000; // without the realtime socket
+	const LIVE_POLL_MS = 5 * 60 * 1000; // with it: news arrives by itself
+	const CATCH_UP_MS = 15 * 1000;
 	const COLLAPSED_KEY = "cyvetech_ui:alerts_collapsed";
-	const POPPED_KEY = "cyvetech_ui:popped:" + USER;
 	const POPPED_LIMIT = 300;
 	const MAX_POPUPS = 3;
 	const SECONDS = Math.min(60, Math.max(3, parseInt(conf.seconds, 10) || 8));
 
+	let user = null; // the signed-in user, known once the desk has started
+	let started = false;
 	let panel = null;
 	let answer = null; // the last answer from the server
 	let known = null; // its keys; null until the first answer lands
 	let busy = false;
 	let again = false; // asked to reload while a load was in flight
+	let last_load = 0; // when the last load was asked for (ms)
 	const urgent_queue = [];
 	let urgent_open = false;
 
@@ -70,9 +81,14 @@
 		return value === "1";
 	}
 
+	// per user: two people taking turns on one browser each get their own
+	function popped_store_key() {
+		return "cyvetech_ui:popped:" + user;
+	}
+
 	function popped_keys() {
 		try {
-			return new Set(JSON.parse(stored(POPPED_KEY) || "[]"));
+			return new Set(JSON.parse(stored(popped_store_key()) || "[]"));
 		} catch (e) {
 			return new Set();
 		}
@@ -81,7 +97,7 @@
 	function remember_popped(key) {
 		const keys = [...popped_keys()].filter((k) => k !== key);
 		keys.push(key);
-		store(POPPED_KEY, JSON.stringify(keys.slice(-POPPED_LIMIT)));
+		store(popped_store_key(), JSON.stringify(keys.slice(-POPPED_LIMIT)));
 	}
 
 	// ── text ────────────────────────────────────────────────────────────
@@ -263,6 +279,7 @@
 			return;
 		}
 		busy = true;
+		last_load = Date.now();
 		frappe
 			.xcall(METHOD)
 			.then((fresh) => {
@@ -448,6 +465,25 @@
 		dialog.show();
 	}
 
+	// ── keeping up ──────────────────────────────────────────────────────
+	function in_view() {
+		return document.visibilityState !== "hidden";
+	}
+
+	// Whether Frappe's realtime socket is connected, so news arrives by itself.
+	function live() {
+		const socket = frappe.realtime && frappe.realtime.socket;
+		return !!(socket && socket.connected);
+	}
+
+	function tick() {
+		if (in_view() && Date.now() - last_load >= (live() ? LIVE_POLL_MS : POLL_MS)) load();
+	}
+
+	function catch_up() {
+		if (in_view() && Date.now() - last_load >= CATCH_UP_MS) load();
+	}
+
 	// ── start ───────────────────────────────────────────────────────────
 	// Whatever takes the panel out of the page (a route that rebuilds the
 	// body, another app's script), it is put straight back from the answer
@@ -460,17 +496,43 @@
 	}
 
 	function start() {
+		if (started) return;
+		// Frappe sets frappe.session.user as the desk starts
+		// (frappe.Application.set_globals), after this file has run, so it
+		// is read here and never when the file loads.
+		user = (frappe.session && frappe.session.user) || (frappe.boot.user && frappe.boot.user.name) || null;
+		if (!user || user === "Guest") return;
+		started = true;
+
 		build();
 		watch();
 		load();
-		if (frappe.router && frappe.router.on) frappe.router.on("change", build);
+		if (frappe.router && frappe.router.on) {
+			frappe.router.on("change", () => {
+				build();
+				catch_up();
+			});
+		}
 		// the realtime socket only exists once the desk has started, which is
 		// why all of this waits for app_ready
 		if (frappe.realtime && frappe.realtime.on) frappe.realtime.on("notification", load);
-		setInterval(load, POLL_MS);
+		setInterval(tick, TICK_MS);
+		document.addEventListener("visibilitychange", catch_up);
+		window.addEventListener("focus", catch_up);
 	}
 
-	cyvetech_ui.reload_alerts = load;
+	cyvetech_ui.reload_alerts = () => started && load();
+
+	// For a look from the browser console: cyvetech_ui.alerts_status()
+	cyvetech_ui.alerts_status = () => ({
+		user,
+		started,
+		panel: !!document.querySelector(".cvt-alerts"),
+		realtime: live(),
+		last_load: last_load ? new Date(last_load).toLocaleTimeString() : null,
+		listed: answer ? (answer.alerts || []).length : null,
+		settings: conf,
+	});
 
 	function begin() {
 		if (!document.body) {

@@ -13,7 +13,11 @@ frappe.ui.form.on("CyveTech UI Settings", {
 		frm.add_custom_button(__("Send Me a Test Alert"), () => {
 			frappe
 				.xcall("cyvetech_ui.cyvetech_ui.doctype.cyvetech_user_alert.cyvetech_user_alert.send_test_alert")
-				.then(() => frappe.show_alert({ message: __("Sent. It pops up in a moment."), indicator: "green" }));
+				.then(() => {
+					frappe.show_alert({ message: __("Sent. It pops up in a moment."), indicator: "green" });
+					// straight away, rather than waiting on the realtime event or the next poll
+					if (window.cyvetech_ui && cyvetech_ui.reload_alerts) cyvetech_ui.reload_alerts();
+				});
 		});
 		frm.add_custom_button(__("Send an Alert to Users"), () => frappe.new_doc("CyveTech User Alert"));
 		frm.add_custom_button(__("Reset Colors to Defaults"), () => reset_colors(frm), __("Colors"));

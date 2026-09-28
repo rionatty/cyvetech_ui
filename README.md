@@ -17,7 +17,7 @@ Built for Frappe / ERPNext **v16**. It installs on v15 too, where everything exc
 | 5 | **Navigation logo and browser icon.** Replace the ERPNext and Frappe logos (the "E") in the app switcher, the desktop's top bar and the sign-in page, and set the browser-tab icon (favicon). Optionally rename "ERPNext" to your product name. | Settings → Branding |
 | 6 | **My Alerts.** A panel in the bottom-right corner showing each user's own open assignments ("overdue by 8 days"), notifications and alerts, most urgent first. Admins can send an alert to specific users or roles with **CyveTech User Alert**. | Settings → Alerts, and CyveTech User Alert |
 | 7 | **Desk modules.** Choose which module tiles show on everyone's desktop. | Settings → Desk Modules |
-| 8 | **Pop-ups.** New notifications and alerts pop up the moment they arrive. Important alerts stay until closed. Urgent ones must be acknowledged. An alert sent while someone was away pops up the next time they open the desk. | Settings → Alerts |
+| 8 | **Pop-ups.** New notifications and alerts pop up the moment they arrive (within a minute if the site's realtime server is down). Important alerts stay until closed. Urgent ones must be acknowledged. An alert sent while someone was away pops up the next time they open the desk. | Settings → Alerts |
 
 ---
 
@@ -32,7 +32,7 @@ bench --site YOUR-SITE clear-cache
 bench restart
 ```
 
-Nothing needs `bench build`: the app's CSS and JavaScript are plain assets. After installing, hard-refresh the browser (Ctrl+Shift+R).
+Nothing needs `bench build`: the app's CSS and JavaScript are plain assets. Each is linked with a hash of its contents, so after an update every browser picks up the new files on its next page load, with no hard refresh.
 
 **To update later:**
 
@@ -61,9 +61,12 @@ Save once, and every user sees the change on their next page load.
 ### Good to know
 
 - **Colors apply in light mode.** Dark mode keeps Frappe's own dark colors.
+- **Pop-ups arrive instantly through Frappe's realtime (socket.io) server.** If it isn't running, nothing is lost: My Alerts checks every minute while the page is open, and straight away when someone comes back to the tab or moves to another page.
+- **Frappe's Getting Started checklist** opens in the same corner as My Alerts. While it's open, My Alerts moves over to sit beside it. On a phone, the checklist moves up above My Alerts instead.
+- **To check My Alerts in a browser**, open the console (F12) and run `cyvetech_ui.alerts_status()`. It shows the signed-in user, whether the panel is on the page, whether the realtime socket is connected, and when the list last loaded.
 - **Hiding a module changes what shows, not who may open it.** Use roles and Module Profiles for access. Users who have rearranged their own desktop keep their layout, and hidden modules are hidden for them too.
 - **Blank logo fields leave your current logos alone.** Clearing a logo here removes only what this app put in Website Settings and Navbar Settings. A logo set there by hand is never touched.
-- **With Stock Addon or HRMS Addon installed:** both ship their own navy theme. CyveTech UI's colors take over theirs, as long as the colour override in *Stock Addon Theme Settings* / *HRMS Addon Theme Settings* is switched off. HRMS Addon also has its own My Alerts panel and sign-in page. Use one or the other: switch off **Show the My Alerts Panel** here, or remove HRMS Addon's. The sign-in page shown is the one from whichever app was installed last.
+- **With Stock Addon or HRMS Addon installed:** both ship their own navy theme. CyveTech UI's colors take over theirs, as long as **Use Custom Colours** in *Stock Addon Theme Settings* / *HRMS Addon Theme Settings* is switched off. Its theme also keeps Frappe's white panels (the bell's notifications list and the Getting Started checklist) readable beside theirs. HRMS Addon also has its own My Alerts panel and sign-in page. Use one or the other: switch off **Show the My Alerts Panel** here, or remove HRMS Addon's. The sign-in page shown is the one from whichever app was installed last.
 
 ---
 
@@ -75,7 +78,7 @@ The Python tests run without a bench. They cover the rules behind the colors, al
 python -m unittest discover -s tests -v
 ```
 
-The desk scripts and stylesheet are tested in a real browser, against a mock of the v16 desk. The mock includes Stock Addon's theme rules, so the tests also prove this app's colors and corners win over them. Serve the repository and open the test page:
+The desk scripts and stylesheet are tested in a real browser, against a mock of the v16 desk. The mock includes Stock Addon's and HRMS Addon's theme rules, so the tests also prove this app's colors and corners win over them. A layout test checks where My Alerts sits beside Frappe's Getting Started checklist at desktop and phone widths. Serve the repository and open the test page:
 
 ```bash
 python -m http.server 8765 --directory .

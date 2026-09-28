@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>layout tests</title>
+<!--
+	My Alerts and Frappe's Getting Started checklist share the bottom-right
+	corner. A page cannot change the width of its own window, so each width
+	runs layout_frame.html in a frame of that size.
+-->
+<script src="harness.js"></script>
+<style>
+	body { font: 13px system-ui; margin: 16px; }
+	iframe { display: block; margin-bottom: 12px; border: 1px solid #ddd; }
+</style>
+</head>
+<body>
+<div id="results"></div>
+<script>
+	const WINDOWS = [
+		{ width: 1280, height: 800 },
+		{ width: 390, height: 800 },
+	];
+
+	(async function () {
+		for (const size of WINDOWS) {
+			const frame = document.createElement("iframe");
+			frame.src = "layout_frame.html" + location.search; // the same files
+			frame.width = size.width;
+			frame.height = size.height;
+			document.body.appendChild(frame);
+			await new Promise((resolve) => {
+				const wait = () => (frame.contentWindow && frame.contentWindow.test_summary ? resolve() : setTimeout(wait, 50));
+				wait();
+			});
+			frame.contentWindow.results.forEach((r) => window.results.push(r));
+		}
+		report();
+	})();
+</script>
+</body>
+</html>

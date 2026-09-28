@@ -12,17 +12,18 @@ raises a redirect for someone already signed in; that is left to happen.
 import frappe
 from frappe.www.login import get_context as frappe_login_context
 
-from cyvetech_ui import __version__
 from cyvetech_ui.cyvetech_ui import login_rules
+from cyvetech_ui.cyvetech_ui.asset_urls import versioned
 from cyvetech_ui.cyvetech_ui.settings import get_settings
 
 no_cache = True
+STYLESHEET = "/assets/cyvetech_ui/css/cyvetech_ui_login.css"
 
 
 def get_context(context):
 	frappe_login_context(context)
 	cvt = look()
-	cvt["version"] = __version__
+	cvt["stylesheet"] = versioned(STYLESHEET)
 	context.cvt = cvt
 	if cvt["enabled"] and cvt["logo"]:
 		context.logo = cvt["logo"]  # the logo on Frappe's card too

@@ -17,7 +17,9 @@
  * (--surface-menu-bar, --sidebar-*, --ink-gray-*, --icon-stroke). Setting
  * them on the sidebar recolors every item, icon and hover state inside it,
  * with no rule per element and nothing to maintain when Frappe adds one.
- * Panels that open inside the sidebar on a white background (the
+ * They go on .body-sidebar, not on the .body-sidebar-container around it:
+ * the container also holds Frappe's Getting Started checklist, a white card
+ * of its own. White panels that open from inside the sidebar (the
  * notifications list, dropdowns) get Frappe's own light values back.
  *
  * WHY SOME RULES CARRY :not(#cvt) AND !important
@@ -51,7 +53,6 @@
 
 /* ── Sidebar ─────────────────────────────────────────────────────────────── */
 
-html.cvt-theme:not([data-theme="dark"]) .body-sidebar-container,
 html.cvt-theme:not([data-theme="dark"]) .body-sidebar,
 html.cvt-theme:not([data-theme="dark"]) .desk-sidebar {
 	--surface-menu-bar: var(--cvt-sidebar-bg);
@@ -99,8 +100,18 @@ html.cvt-theme:not([data-theme="dark"]) .desk-sidebar :is(.standard-sidebar-item
 	stroke: var(--cvt-highlight-text) !important;
 }
 
-/* White panels that open inside the sidebar keep Frappe's light ink. */
-html.cvt-theme:not([data-theme="dark"]) :is(.body-sidebar-container, .desk-sidebar) :is(.dropdown-menu, .notifications-list, .popover, .awesomplete > ul) {
+/* ── Frappe's white panels in the sidebar's container ────────────────────────
+ * The notifications list (the bell), the Getting Started checklist and the
+ * dropdown menus live inside the sidebar's markup but are white cards of
+ * their own: they keep Frappe's light colors.
+ *
+ * Stock Addon's and HRMS Addon's themes make everything inside the
+ * sidebar's container transparent, and paint it in their light sidebar
+ * ink, with !important. The --agri-/--hra- values below turn that ink dark
+ * inside these panels, and the rules after them give the panels their
+ * backgrounds and lines back. */
+
+html.cvt-theme:not([data-theme="dark"]) :is(.body-sidebar-container, .desk-sidebar) :is(.notifications-list, .onb-panel, .dropdown-menu, .popover, .awesomplete > ul) {
 	--heading-color: var(--gray-900);
 	--text-color: var(--gray-800);
 	--text-muted: var(--gray-700);
@@ -114,7 +125,49 @@ html.cvt-theme:not([data-theme="dark"]) :is(.body-sidebar-container, .desk-sideb
 	--icon-stroke: var(--gray-800);
 	--border-color: var(--gray-200);
 	--sidebar-hover-color: #f3f3f3;
+	--agri-shell-text: var(--gray-800);
+	--agri-shell-muted: var(--gray-700);
+	--hra-shell-text: var(--gray-800);
+	--hra-shell-muted: var(--gray-700);
 	color: var(--text-color);
+}
+
+/* White rather than Frappe's --bg-color, which is the page color here: a
+ * hovered row's highlight would not show on it. */
+html.cvt-theme:not([data-theme="dark"]) .body-sidebar-container .notifications-list:not(#cvt) {
+	background-color: var(--card-bg, #ffffff) !important;
+}
+
+html.cvt-theme:not([data-theme="dark"]) .notifications-list .recent-item:not(.no-hover):hover:not(#cvt) {
+	background-color: var(--fg-hover-color) !important;
+}
+
+html.cvt-theme:not([data-theme="dark"]) .notifications-list .notification-list-header:not(#cvt) {
+	border-bottom-color: var(--border-color) !important;
+}
+
+html.cvt-theme:not([data-theme="dark"]) .notifications-list .notifications-category.active:not(#cvt) {
+	border-bottom-color: var(--primary-color) !important;
+}
+
+/* the Getting Started checklist, with Frappe's own colors
+   (frappe/public/js/frappe/ui/user_onboarding/user_onboarding.bundle.js) */
+html.cvt-theme:not([data-theme="dark"]) .body-sidebar-container .onb-panel:not(#cvt) {
+	background-color: #ffffff !important;
+}
+
+html.cvt-theme:not([data-theme="dark"]) .onb-panel .onb-group:hover:not(#cvt) {
+	background-color: #f5f5f5 !important;
+}
+
+html.cvt-theme:not([data-theme="dark"]) .onb-panel .onb-progress-badge:not(#cvt) {
+	background-color: #fdfaed !important;
+	color: #db7706 !important;
+}
+
+html.cvt-theme:not([data-theme="dark"]) .onb-panel .onb-progress-badge-complete:not(#cvt) {
+	background-color: #e4faeb !important;
+	color: #278f5e !important;
 }
 
 /* ── The central part: the page behind the cards ────────────────────────── */
@@ -193,14 +246,16 @@ html.cvt-rounded .desktop-container .desktop-icon:not(#cvt) {
 }
 
 /* ── My Alerts ───────────────────────────────────────────────────────────────
- * Floats in the bottom-right corner, fixed to the window: Frappe rebuilds the
- * page between routes, and a panel inside the page would go with it. It sits
- * over the page and under Frappe's dialogs (1050). Colors come from Frappe's
- * variables where they exist, so it follows light and dark mode. */
+ * Floats in the bottom-right corner (bottom-left in a right-to-left
+ * language, like Frappe's own panels), fixed to the window: Frappe rebuilds
+ * the page between routes, and a panel inside the page would go with it.
+ * It sits over the page, under Frappe's dialogs (1050) and its
+ * "Saved"-style toasts (2000). Colors come from Frappe's variables where
+ * they exist, so it follows light and dark mode. */
 
 .cvt-alerts {
 	position: fixed;
-	right: 20px;
+	inset-inline-end: 20px;
 	bottom: 20px;
 	z-index: 1030;
 	display: flex;
@@ -218,6 +273,18 @@ html.cvt-rounded .desktop-container .desktop-icon:not(#cvt) {
 
 .cvt-alerts[hidden] {
 	display: none;
+}
+
+/* Frappe's Getting Started checklist opens in the same corner (fixed, 310px
+ * wide, 20px in). While it is open, My Alerts moves over to sit beside it. */
+html:has(.onb-panel) .cvt-alerts {
+	inset-inline-end: calc(20px + 310px + 16px);
+}
+
+/* Room under the page's last lines, so they can scroll clear of My Alerts.
+ * (Frappe gives the page 90px itself while the checklist is in use.) */
+html:has(.cvt-alerts) .main-section {
+	padding-bottom: 72px;
 }
 
 /* the header is the button that shrinks the panel and opens it again */
@@ -526,13 +593,27 @@ html.cvt-rounded .desktop-container .desktop-icon:not(#cvt) {
 
 @media (max-width: 767px) {
 	.cvt-alerts {
-		right: 12px;
+		inset-inline-end: 12px;
 		bottom: 12px;
 	}
 
 	.cvt-popups {
 		top: 12px;
 		right: 12px;
+	}
+}
+
+/* Too narrow for My Alerts and the checklist side by side: My Alerts keeps
+ * the corner (shrunk to its header on a phone) and the checklist moves up
+ * above it. */
+@media (max-width: 719px) {
+	html:has(.onb-panel) .cvt-alerts {
+		inset-inline-end: 12px;
+	}
+
+	html:has(.cvt-alerts) .onb-panel {
+		bottom: 64px;
+		max-height: calc(80vh - 40px);
 	}
 }
 

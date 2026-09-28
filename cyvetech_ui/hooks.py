@@ -1,3 +1,5 @@
+from cyvetech_ui.cyvetech_ui.asset_urls import versioned
+
 app_name = "cyvetech_ui"
 app_title = "CyveTech UI"
 app_publisher = "CyveTech"
@@ -10,18 +12,20 @@ app_license = "mit"
 
 # Desk
 # ----
-# Plain asset paths: nothing here needs `bench build`.
+# Plain asset paths: nothing here needs `bench build`. Each carries a hash
+# of its contents (asset_urls.py), so browsers fetch a file again once it
+# changes instead of keeping the copy they cached.
 #
 #  cyvetech_ui.css         the theme, rounded tiles, the My Alerts panel, pop-ups
 #  cyvetech_ui_desk.js     applies the theme and branding from the boot, and
 #                          hides the modules taken off the desk
 #  cyvetech_ui_charts.js   gives charts the palette from the settings
 #  cyvetech_ui_alerts.js   My Alerts and the pop-ups for what just arrived
-app_include_css = ["/assets/cyvetech_ui/css/cyvetech_ui.css"]
+app_include_css = [versioned("/assets/cyvetech_ui/css/cyvetech_ui.css")]
 app_include_js = [
-	"/assets/cyvetech_ui/js/cyvetech_ui_desk.js",
-	"/assets/cyvetech_ui/js/cyvetech_ui_charts.js",
-	"/assets/cyvetech_ui/js/cyvetech_ui_alerts.js",
+	versioned("/assets/cyvetech_ui/js/cyvetech_ui_desk.js"),
+	versioned("/assets/cyvetech_ui/js/cyvetech_ui_charts.js"),
+	versioned("/assets/cyvetech_ui/js/cyvetech_ui_alerts.js"),
 ]
 
 # The settings ride along with every desk boot, so colors and logos are in

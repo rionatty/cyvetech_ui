@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <title>CyveTech UI browser tests</title>
 <!--
-	Runs the desk, chart and alert test pages and sums them up. Serve the
+	Runs the desk, chart, alert and layout test pages and sums them up. Serve the
 	repository and open this page:
 
 		python -m http.server 8765 --directory .
@@ -15,14 +15,15 @@
 	h1 { font-size: 18px; margin: 0 0 16px; }
 	td { padding: 4px 16px 4px 0; }
 	.pass { color: #166534; } .fail { color: #b91c1c; }
-	iframe { display: none; }
+	/* laid out, out of sight: the layout tests measure where things sit */
+	iframe { position: absolute; left: -10000px; top: 0; width: 1280px; height: 900px; border: 0; }
 </style>
 </head>
 <body>
 <h1>CyveTech UI browser tests</h1>
 <table><tbody id="rows"></tbody></table>
 <script>
-	const SUITES = ["desk.html", "charts.html", "alerts.html"];
+	const SUITES = ["desk.html", "charts.html", "alerts.html", "layout.html"];
 
 	function run(page) {
 		return new Promise((resolve) => {

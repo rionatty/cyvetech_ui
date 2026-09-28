@@ -382,12 +382,15 @@ class Boot(Base):
 		frappe.doctypes = {"CyveTech UI Settings"}
 		payload = self.boot().cyvetech_ui
 		self.assertIn("theme", payload)  # get_settings fell back to the defaults
-		original = boot.payload
+		original, original_logger = boot.payload, frappe.logger
 		boot.payload = lambda *a, **k: 1 / 0
 		try:
 			self.assertEqual(set(self.boot().cyvetech_ui), {"version"})
+			self.assertEqual([module for module, _ in frappe.logged], ["cyvetech_ui"])  # and says why, in its log
+			frappe.logger = lambda *a, **k: 1 / 0
+			self.assertEqual(set(self.boot().cyvetech_ui), {"version"})  # even when the log cannot be written
 		finally:
-			boot.payload = original
+			boot.payload, frappe.logger = original, original_logger
 
 
 class SettingsForm(Base):

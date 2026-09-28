@@ -108,6 +108,12 @@
 		},
 	};
 	const N_READ = { kind: "notification", key: "NL-4", urgency: "none", unread: 0, created: "2026-09-20", title: "Old news", doctype: "Task", docname: "TASK-9" };
+	// from one of ERPNext's own Notification rules, not from CyveTech User Alert
+	const A_ERPNEXT = {
+		kind: "notification", key: "NL-60", type: "Alert", urgency: "none", unread: 1, created: "2026-09-28 06:00:00",
+		title: "Cement is below its reorder level", message: "Only 12 bags left in Stores - MI.",
+		doctype: "Item", docname: "CEMENT-50KG", from_user: "Administrator",
+	};
 
 	(async function () {
 		// ── the desk starting, the way Frappe v16 starts it ────────────
@@ -120,13 +126,13 @@
 		check("it listens for new notifications", (window.realtime.notification || []).length === 1, window.realtime);
 
 		// ── first visit ────────────────────────────────────────────────
-		await answer({ alerts: [A_URGENT, T1, N1, A_NORMAL, N_READ], total: 4, band: "overdue" });
+		await answer({ alerts: [A_URGENT, T1, N1, A_NORMAL, A_ERPNEXT, N_READ], total: 5, band: "overdue" });
 
 		const badge = document.querySelector(".cvt-alerts-count");
-		check("the badge counts what is outstanding", badge.textContent === "4", badge.textContent);
+		check("the badge counts what is outstanding", badge.textContent === "5", badge.textContent);
 		check("the badge takes the most urgent band", badge.classList.contains("cvt-band-overdue"), badge.className);
 		const rows = [...document.querySelectorAll(".cvt-alert")];
-		check("every alert is a row", rows.length === 5, rows.length);
+		check("every alert is a row", rows.length === 6, rows.length);
 		const t1 = rows.find((r) => r.dataset.key === "TODO-1");
 		check("an assignment reads like the screenshot",
 			t1.querySelector(".cvt-alert-meta").textContent === "Interview Shortlist · HR-SHL-2026-0001 · overdue by 8 days",
@@ -142,7 +148,14 @@
 		check("Mark notifications read shows while something is unread", !document.querySelector(".cvt-alerts-foot").hidden, "hidden");
 
 		check("first visit: an unread alert that never popped up pops up", titles().includes("Stock count on Friday"), titles());
-		check("first visit: old notifications and assignments do not pop up", titles().length === 1, titles());
+		check("first visit: an ERPNext alert that arrived while away pops up too", titles().includes("Cement is below its reorder level"), titles());
+		const erpnext_card = popups().find((p) => p.querySelector(".cvt-popup-title").textContent === "Cement is below its reorder level");
+		check("labeled as an alert", erpnext_card && erpnext_card.querySelector(".cvt-popup-kicker").textContent === "Alert",
+			erpnext_card && erpnext_card.querySelector(".cvt-popup-kicker").textContent);
+		check("with the message from its Notification rule", erpnext_card && erpnext_card.querySelector(".cvt-popup-body").textContent === "Only 12 bags left in Stores - MI.",
+			erpnext_card && erpnext_card.querySelector(".cvt-popup-body").textContent);
+		check("first visit: old notifications and assignments do not pop up",
+			titles().length === 2 && !titles().includes(T1.title) && !titles().includes(N1.title), titles());
 		check("the alert's pop-up shows its message as text", popups()[0].querySelector(".cvt-popup-body").textContent === "Count the main store before noon.",
 			popups()[0].querySelector(".cvt-popup-body").textContent);
 		check("a Normal alert's pop-up closes by itself", !!popups()[0].querySelector(".cvt-popup-timer"), "no timer");
@@ -155,7 +168,7 @@
 			!/onerror|<script|javascript:/i.test(urgent.html) && !window.__xss2 && !window.__xss3, urgent.html);
 		check("it offers to open the document it is about", urgent.opts.secondary_action_label === "Open", urgent.opts.secondary_action_label);
 		check("popped alerts are remembered, for the signed-in user; the Urgent one not until acknowledged",
-			popped().includes("NL-2") && !popped().includes("NL-3"), [popped(), Object.keys(localStorage)]);
+			popped().includes("NL-2") && popped().includes("NL-60") && !popped().includes("NL-3"), [popped(), Object.keys(localStorage)]);
 
 		urgent.opts.primary_action();
 		await tick();

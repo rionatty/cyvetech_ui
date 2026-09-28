@@ -63,8 +63,30 @@
 			if (logo && (platform || branding.replace_all)) app.app_logo_url = logo;
 			if (product && platform) app.app_title = product;
 		});
+		// the stylesheet sizes the desktop's top-bar logo for a wide one
+		root.classList.toggle("cvt-brand", !!logo);
 		if (branding.favicon) set_favicon(branding.favicon);
+		cyvetech_ui.brand_sidebar_header(branding);
 	}
+
+	// The navigation pane's header shows each workspace's own icon, or a
+	// letter where there is none. With the logo switched on there, it shows
+	// the brand's mark instead: the browser icon, which is square, else the
+	// logo. The header is built from this class on every page, after this
+	// file has run, so changing the class once covers them all.
+	cyvetech_ui.brand_sidebar_header = function (branding, Header) {
+		branding = branding || {};
+		Header = Header || (frappe.ui && frappe.ui.SidebarHeader);
+		const mark = (branding.favicon || branding.logo || "").trim();
+		if (!Header || !branding.sidebar_logo || !mark || Header.prototype.cvt_branded) return false;
+		const own = Header.prototype.set_header_icon;
+		Header.prototype.set_header_icon = function () {
+			if (own) own.apply(this, arguments);
+			this.header_icon = `<img class="cvt-brand-mark" src="${frappe.utils.escape_html(mark)}" alt="">`;
+		};
+		Header.prototype.cvt_branded = true;
+		return true;
+	};
 
 	function set_favicon(href) {
 		const links = document.querySelectorAll('link[rel~="icon"]');

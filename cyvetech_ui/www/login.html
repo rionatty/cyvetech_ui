@@ -1,6 +1,7 @@
 {% extends "frappe/www/login.html" %}
 {#-
-	The sign-in page: Frappe's own page and card, set beside a brand panel.
+	The sign-in page: Frappe's own page, set in one card with the logo and a
+	heading, over a backdrop in the brand's colors (or a photo).
 	Every section, form, id and class of Frappe's is left exactly as it renders
 	it, because login.js drives the page by them; this file only wraps them.
 	The look comes from login.py (cyvetech_ui/cyvetech_ui/login_rules.py),
@@ -24,26 +25,26 @@
 
 {% block page_content %}
 {%- if cvt and cvt.enabled %}
-<div class="cvt-login{{ ' cvt-login-has-image' if cvt.image else '' }}{{ ' cvt-login-has-logo' if cvt.logo else '' }}">
-	<aside class="cvt-login-brand"
-		{%- if cvt.image %} style="--cvt-login-image: url('{{ cvt.image }}')"{% endif %}>
-		<div class="cvt-login-brand-inner">
-			{%- if cvt.logo %}
-			<div class="cvt-login-logo">
-				<img src="{{ cvt.logo }}" alt="{{ app_name | e }}">
-			</div>
-			{%- endif %}
-			<h1 class="cvt-login-heading">{{ _(cvt.heading) | e }}</h1>
-			<p class="cvt-login-tagline">{{ _(cvt.tagline) | e }}</p>
-		</div>
-		<p class="cvt-login-product">{{ app_name | e }}</p>
-	</aside>
-	<main class="cvt-login-main">
+<div class="cvt-login{{ ' cvt-login-has-logo' if cvt.logo else '' }}" id="cvt-login"
+	{%- if cvt.image %} data-photo="{{ cvt.image }}"{% endif %}>
+	<div class="cvt-login-backdrop" aria-hidden="true"></div>
+	<div class="cvt-login-main">
 		<div class="cvt-login-card">
+			<header class="cvt-login-header">
+				{%- if cvt.logo %}
+				<img class="cvt-login-logo" src="{{ cvt.logo }}" alt="{{ app_name | e }}">
+				{%- endif %}
+				<div class="cvt-login-intro">
+					<h1 class="cvt-login-heading">{{ _(cvt.heading) | e }}</h1>
+					<p class="cvt-login-tagline">{{ _(cvt.tagline) | e }}</p>
+				</div>
+			</header>
 			{{ super() }}
 		</div>
-	</main>
+		<p class="cvt-login-footer">&copy; {{ cvt.year }}{% if app_name %} {{ app_name | e }}{% endif %}</p>
+	</div>
 </div>
+<script src="{{ cvt.script }}"></script>
 {%- else %}
 {{ super() }}
 {%- endif %}

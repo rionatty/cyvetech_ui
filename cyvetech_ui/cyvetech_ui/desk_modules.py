@@ -5,7 +5,8 @@
 
 The desktop's tiles are Desktop Icon records (Frappe v16), each with a
 `hidden` flag that Frappe itself honors. The Desk Modules table on the
-settings page lists the top-level tiles; saving sets their flags.
+settings page lists every tile, each module under its group (an app or a
+folder; desk_modules_rules.py explains the nesting); saving sets their flags.
 
 One catch, handled in the browser: a user who has rearranged their own
 desktop keeps a saved copy of every tile (Desktop Layout), and Frappe shows
@@ -33,14 +34,14 @@ def available():
 		return False
 
 
-def top_level_icons():
-	"""The tiles on the desktop itself: icons with no parent, shipped by an
-	app or created by the Administrator (not users' own shortcuts)."""
+def desk_icons():
+	"""Every tile the desktop can show, groups and the modules in them alike:
+	those shipped by an app or created by the Administrator (not users' own
+	shortcuts)."""
 	return frappe.get_all(
 		DESKTOP_ICON,
-		filters={"parent_icon": ["is", "not set"]},
 		or_filters={"standard": 1, "owner": "Administrator"},
-		fields=["name", "label", "app", "icon_type", "hidden"],
+		fields=["name", "label", "app", "icon_type", "hidden", "parent_icon"],
 		order_by="idx asc, label asc",
 	)
 
@@ -59,7 +60,7 @@ def refresh_rows(settings_doc):
 	if not available():
 		frappe.throw(frappe._("This version of Frappe has no desktop tiles to choose from."))
 	current = [row.as_dict() for row in settings_doc.get("desk_modules") or []]
-	settings_doc.set("desk_modules", rules.merge_rows(current, top_level_icons()))
+	settings_doc.set("desk_modules", rules.merge_rows(current, desk_icons()))
 
 
 def apply():
@@ -69,7 +70,7 @@ def apply():
 	rows = saved_rows()
 	if not rows:
 		return False  # the table was never filled in: leave the desk as it is
-	updates = rules.changes(rows, top_level_icons())
+	updates = rules.changes(rows, desk_icons())
 	for name, hidden in updates:
 		frappe.db.set_value(DESKTOP_ICON, name, "hidden", hidden, update_modified=False)
 	if updates:

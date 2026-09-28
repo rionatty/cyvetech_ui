@@ -83,6 +83,7 @@ def payload(settings, hidden_modules):
 			"favicon": settings.favicon,
 			"product_name": settings.product_name,
 			"replace_all": settings.replace_all_app_logos,
+			"sidebar_logo": settings.sidebar_logo,
 		},
 		"alerts": {
 			"panel": settings.alerts_panel,

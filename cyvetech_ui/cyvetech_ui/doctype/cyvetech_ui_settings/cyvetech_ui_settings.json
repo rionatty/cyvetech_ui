@@ -7,6 +7,7 @@
   "tab_branding",
   "brand_logo",
   "replace_all_app_logos",
+  "sidebar_logo",
   "column_break_branding",
   "favicon",
   "product_name",
@@ -67,7 +68,7 @@
    "label": "Branding"
   },
   {
-   "description": "Replaces the ERPNext and Frappe logos in the desk: the app switcher, the desktop's top bar and the sign-in page. A wide logo about 240 × 64 px works best. Upload it as a public file.",
+   "description": "Replaces the ERPNext and Frappe logos in the desk: the desktop's top bar, the loading screen, the app switcher and the sign-in page. A wide logo about 240 × 64 px works best. Upload it as a public file.",
    "fieldname": "brand_logo",
    "fieldtype": "Attach Image",
    "label": "Navigation Logo"
@@ -80,11 +81,18 @@
    "label": "Use the Navigation Logo for Every App"
   },
   {
+   "default": "1",
+   "description": "At the top of the navigation pane, in place of each workspace's own icon. It uses the Browser Icon, which is square, or the Navigation Logo if there's no browser icon.",
+   "fieldname": "sidebar_logo",
+   "fieldtype": "Check",
+   "label": "Show the Logo in the Navigation Pane"
+  },
+  {
    "fieldname": "column_break_branding",
    "fieldtype": "Column Break"
   },
   {
-   "description": "The small icon on the browser tab. A square PNG or SVG, 64 × 64 px or larger. Upload it as a public file.",
+   "description": "The small icon on the browser tab, also shown at the top of the navigation pane. A square PNG or SVG, 64 × 64 px or larger. Upload it as a public file.",
    "fieldname": "favicon",
    "fieldtype": "Attach Image",
    "label": "Browser Icon (Favicon)"
@@ -275,10 +283,10 @@
    "label": "Sign-in Logo"
   },
   {
-   "description": "Optional picture behind the brand panel, darkened so the text stays readable. Upload it as a public file.",
+   "description": "Optional. A photo at least 1600 px wide, shown full-screen behind the sign-in card. Leave it blank for the brand backdrop. A smaller picture, or the logo itself, is not used: stretched to fill the screen it would look blurry. Upload it as a public file.",
    "fieldname": "login_image",
    "fieldtype": "Attach Image",
-   "label": "Brand Panel Picture"
+   "label": "Background Photo"
   },
   {
    "fieldname": "column_break_login",
@@ -307,7 +315,8 @@
    "default": "#16335E",
    "fieldname": "login_panel_color",
    "fieldtype": "Color",
-   "label": "Brand Panel"
+   "label": "Brand Color",
+   "description": "The accent line across the top of the sign-in card, and the soft glow behind it."
   },
   {
    "default": "#16335E",
@@ -339,7 +348,7 @@
   },
   {
    "default": "1",
-   "description": "Show each new notification the moment it arrives. Alerts sent from CyveTech User Alert always pop up, including ones that arrived while the user was away.",
+   "description": "Show each new notification the moment it arrives. Alerts always pop up, including ones that arrived while the user was away: those from ERPNext's Notification rules and those sent from CyveTech User Alert.",
    "fieldname": "popup_notifications",
    "fieldtype": "Check",
    "label": "Pop Up New Notifications"
@@ -372,7 +381,7 @@
    "fieldtype": "HTML"
   },
   {
-   "description": "Untick a module to take its tile off everyone's desktop. This changes what shows, not who may open it: use roles and Module Profiles for access.",
+   "description": "Untick a module to take its tile off everyone's desktop. An App or a Folder is a group: its tile holds the modules listed under it, and if you untick the group, those modules show on the desktop on their own unless you untick them too. This changes what shows, not who may open it: use roles and Module Profiles for access.",
    "fieldname": "desk_modules",
    "fieldtype": "Table",
    "label": "Modules on the Desk",
@@ -382,7 +391,7 @@
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2026-09-28 09:00:00.000000",
+ "modified": "2026-09-28 18:00:00.000000",
  "modified_by": "Administrator",
  "module": "CyveTech UI",
  "name": "CyveTech UI Settings",

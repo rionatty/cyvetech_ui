@@ -5,111 +5,195 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Sign-in page preview</title>
 <!--
-	A static stand-in for the sign-in page, to see cyvetech_ui_login.css without
-	a bench: Frappe's own markup for the page (templates/web.html and
-	www/login.html) inside this app's wrapper (www/login.html), with the
-	shipped default colors. The few Bootstrap and login.bundle rules the card
-	leans on are approximated below; on a real site Frappe supplies them.
+	A static stand-in for the sign-in page, to see and test the app's
+	stylesheet and script without a bench: the markup Frappe v16 renders
+	(templates/web.html and www/login.html) inside this app's wrapper
+	(cyvetech_ui/www/login.html), with the shipped default colors. The rules
+	of Frappe's own login.bundle.css that this app's styles meet are copied
+	below with their selectors, so the same rules win here as on a site.
 
-	?image=1 shows the brand panel with a picture behind it.
+	?photo=big    a 2000 px wide photo behind the card
+	?photo=small  a small picture (the logo) set as the photo: not used
+	?nologo=1     no logo uploaded
+	#forgot       the forgot-password step
+	?use:<file>=<url>  another copy of one of the app's files (harness.js)
 -->
 <style>
-	body { margin: 0; font: 14px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif; }
+	/* the website's base (Bootstrap's reboot and buttons, roughly) */
 	*, *::before, *::after { box-sizing: border-box; }
-	.form-group { margin-bottom: 14px; }
-	.form-control { display: block; width: 100%; padding: 8px 12px; font: inherit; border: 1px solid #ced4da; }
-	.email-field, .password-field { position: relative; }
-	.btn { display: inline-block; font: inherit; cursor: pointer; }
-	.btn-block { display: block; width: 100%; }
-	.page-card-head { display: flex; flex-direction: column; align-items: center; gap: 12px; margin-bottom: 24px; text-align: center; }
-	.page-card-head img.app-logo { max-height: 32px; }
-	.page-card-head h4 { margin: 0; }
-	.page-card-subtitle { margin: 4px 0 0; }
-	.forgot-password-message { text-align: right; margin: 0 0 8px; font-size: 13px; }
-	.sign-up-message { margin: 16px 0 0; text-align: center; font-size: 13px; }
+	body { margin: 0; font: 14px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif; color: #383838; background: #fff; }
+	h1, h4, p { margin-top: 0; }
 	a { text-decoration: none; }
+	.form-group { margin: 0; }
+	.form-control { display: block; width: 100%; font: inherit; }
+	.btn { display: inline-block; font: inherit; line-height: 1.4; cursor: pointer; border: 1px solid transparent; }
+	.btn-block { display: block; width: 100%; }
+	.page-card { border: 1px solid #ededed; box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08); }
+
+	/* Frappe v16's login.bundle.css (public/scss/login.bundle.scss): the rules this app's meet */
+	body .page-content-wrapper { min-height: calc(100vh - 220px); padding-top: 60px; }
+	.for-forgot, .for-login-with-email-link, .for-signup, .for-email-login { display: none; }
+	.for-login .page-card, .for-forgot .page-card {
+		padding: 24px; background-color: #fff; max-width: 371px; width: 100%; margin: 0 auto;
+		border-radius: 12px; display: flex; flex-direction: column; gap: 24px;
+	}
+	@media (max-width: 575px) {
+		.for-login .page-card, .for-forgot .page-card { max-width: 100%; min-height: 100svh; border-radius: 0; border: none; padding: 60px 32px 32px; }
+	}
+	.for-login .page-card form, .for-forgot .page-card form { display: flex; flex-direction: column; gap: 16px; margin: 0; }
+	.for-login .page-card .page-card-actions, .for-forgot .page-card .page-card-actions { display: flex; flex-direction: column; gap: 12px; }
+	.for-login .page-card .page-card-actions .btn-login, .for-forgot .page-card .page-card-actions .btn-signup { height: 28px; border-radius: 6px; background: #171717; color: #fff; }
+	.for-login .page-card .page-card-actions .btn-login-option { height: 28px; border-radius: 6px; background: #f3f3f3; color: #383838; text-align: center; }
+	.for-login .page-card .page-card-body, .for-forgot .page-card .page-card-body { display: flex; flex-direction: column; gap: 14px; }
+	.for-login .page-card .page-card-body input[type="text"],
+	.for-login .page-card .page-card-body input[type="password"],
+	.for-forgot .page-card .page-card-body input[type="email"] { border: 1px solid #e2e2e2; height: 28px; padding: 6px 8px; border-radius: 6px; background-color: #fff; }
+	.for-login .page-card .page-card-body .form-label, .for-forgot .page-card .page-card-body .form-label { color: #7c7c7c; margin-bottom: 0; }
+	.for-login .page-card .page-card-body .forgot-password-message { text-align: right; margin: 6px 0 0; }
+	.for-login .page-card .page-card-body .forgot-password-message > * { color: #7c7c7c; }
+	.for-login .page-card .page-card-body .field-icon, .for-forgot .page-card .page-card-body .field-icon { left: 8px; top: 50%; transform: translateY(-50%); position: absolute; z-index: 2; fill: none; stroke: #999; }
+	.for-login .page-card .page-card-body .email-field, .for-login .page-card .page-card-body .password-field,
+	.for-forgot .page-card .page-card-body .email-field { position: relative; width: 100%; }
+	.for-login .page-card .page-card-body .email-field input, .for-login .page-card .page-card-body .password-field input,
+	.for-forgot .page-card .page-card-body .email-field input { padding-left: 38px; }
+	.page-card-head { padding: 0; margin: 0; text-align: left; display: flex; flex-direction: column; align-items: flex-start; gap: 16px; }
+	.page-card-head img.app-logo { max-height: 32px; width: auto; }
+	.page-card-head .page-card-head-text { display: flex; flex-direction: column; gap: 6px; align-self: stretch; }
+	.page-card-head h4 { margin: 0; font-size: 20px; font-weight: 700; color: #171717; }
+	.page-card-head .page-card-subtitle { margin: 0; color: #525252; }
+	.sign-up-message { text-align: center; margin: 0; }
 </style>
-<link rel="stylesheet" href="/cyvetech_ui/public/css/cyvetech_ui_login.css">
+<script src="harness.js"></script>
+<script>load_app_file("/cyvetech_ui/public/css/cyvetech_ui_login.css")</script>
 <style>
 	/* what login.html prints from the settings (login_rules.py), shipped defaults */
 	:root {
-		--cvt-login-panel: #16335E;
-		--cvt-login-panel-deep: #0E213D;
-		--cvt-login-panel-text: #FFFFFF;
+		--cvt-login-brand: #16335E;
+		--cvt-login-accent: #EAA51A;
+		--cvt-login-glow: #16335E2E;
+		--cvt-login-glow-accent: #EAA51A24;
 		--cvt-login-button: #16335E;
 		--cvt-login-button-hover: #122A4D;
 		--cvt-login-button-text: #FFFFFF;
 		--cvt-login-link: #16335E;
 		--cvt-login-background: #F4F6FA;
+		--cvt-login-on-background: #111827;
+		--cvt-login-dots: #1118271A;
 	}
 </style>
 </head>
-<body data-path="login" frappe-session-status="logged-out">
-<div id="page-login" data-path="login">
-	<div class="page-content-wrapper">
-		<div class="page-breadcrumbs"></div>
-		<main class="container">
-			<div class="page-header-wrapper"><div class="page-header"></div></div>
-			<div class="page_content">
-				<div class="cvt-login cvt-login-has-logo" id="wrapper">
-					<aside class="cvt-login-brand" id="brand">
-						<div class="cvt-login-brand-inner">
-							<div class="cvt-login-logo">
-								<img alt="Luuka ERP" src="data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='48'%3E%3Crect width='48' height='48' rx='12' fill='%2316335E'/%3E%3Ctext x='24' y='32' font-family='Georgia' font-size='26' font-weight='700' fill='%23EAA51A' text-anchor='middle'%3EL%3C/text%3E%3Ctext x='60' y='32' font-family='system-ui' font-size='22' font-weight='700' fill='%2316335E'%3ELuuka ERP%3C/text%3E%3C/svg%3E">
+<body data-path="login">
+<div class="page-content-wrapper">
+	<div class="page-breadcrumbs"></div>
+	<main class="container">
+		<div class="page-header-wrapper"><div class="page-header"></div></div>
+		<div class="page_content">
+			<div class="cvt-login cvt-login-has-logo" id="cvt-login">
+				<div class="cvt-login-backdrop" aria-hidden="true"></div>
+				<div class="cvt-login-main">
+					<div class="cvt-login-card">
+						<header class="cvt-login-header">
+							<img class="cvt-login-logo" id="logo" alt="Luuka ERP" src="data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='240' height='64' viewBox='0 0 240 64'%3E%3Crect x='0' y='4' width='56' height='56' rx='14' fill='%2316335E'/%3E%3Ctext x='28' y='43' font-family='Georgia' font-size='32' font-weight='700' fill='%23EAA51A' text-anchor='middle'%3EL%3C/text%3E%3Ctext x='70' y='43' font-family='system-ui, sans-serif' font-size='28' font-weight='700' fill='%2316335E'%3ELuuka ERP%3C/text%3E%3C/svg%3E">
+							<div class="cvt-login-intro">
+								<h1 class="cvt-login-heading" id="heading">Welcome back</h1>
+								<p class="cvt-login-tagline">Sign in to pick up where you left off.</p>
 							</div>
-							<h1 class="cvt-login-heading">Welcome back</h1>
-							<p class="cvt-login-tagline">Sign in to pick up where you left off.</p>
-						</div>
-						<p class="cvt-login-product">Luuka ERP</p>
-					</aside>
-					<main class="cvt-login-main">
-						<div class="cvt-login-card">
-							<div>
-								<section class="for-login">
-									<div class="login-content page-card">
-										<div class="page-card-head">
-											<img class="app-logo" alt="" src="data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='32' height='32'%3E%3Crect width='32' height='32' rx='8' fill='%23999'/%3E%3C/svg%3E">
-											<div class="page-card-head-text">
-												<h4>Sign In</h4>
-												<p class="page-card-subtitle">Welcome! Please sign in to continue.</p>
+						</header>
+						<div>
+							<section class="for-login">
+								<div class="login-content page-card">
+									<div class="page-card-head" id="login-head">
+										<img class="app-logo" alt="" src="data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='32' height='32'%3E%3Crect width='32' height='32' rx='8' fill='%23999'/%3E%3C/svg%3E">
+										<div class="page-card-head-text">
+											<h4>Sign In</h4>
+											<p class="page-card-subtitle">Welcome! Please sign in to continue.</p>
+										</div>
+									</div>
+									<form class="form-signin form-login" onsubmit="return false">
+										<div class="page-card-body">
+											<div class="form-group">
+												<label class="form-label" for="login_email">Email</label>
+												<div class="email-field">
+													<input type="text" id="login_email" class="form-control" placeholder="jane@example.com" autocomplete="off">
+													<svg class="field-icon email-icon" id="email-icon" width="16" height="16" viewBox="0 0 16 16"><rect x="2" y="3.5" width="12" height="9" rx="1.5"/><path d="m2.5 4.5 5.5 4 5.5-4"/></svg>
+												</div>
+											</div>
+											<div class="form-group">
+												<label class="form-label" for="login_password">Password</label>
+												<div class="password-field">
+													<input type="password" id="login_password" class="form-control" placeholder="•••••" autocomplete="off">
+													<svg class="field-icon password-icon" width="16" height="16" viewBox="0 0 16 16"><rect x="3" y="7" width="10" height="7" rx="1.5"/><path d="M5.5 7V5a2.5 2.5 0 0 1 5 0v2"/></svg>
+												</div>
+												<p class="forgot-password-message"><a href="#forgot" id="forgot-link">Forgot password?</a></p>
 											</div>
 										</div>
-										<form class="form-signin form-login" onsubmit="return false">
-											<div class="page-card-body">
-												<div class="form-group">
-													<label class="form-label" for="login_email">Email</label>
-													<div class="email-field"><input type="text" id="login_email" class="form-control" placeholder="jane@example.com"></div>
-												</div>
-												<div class="form-group">
-													<label class="form-label" for="login_password">Password</label>
-													<div class="password-field"><input type="password" id="login_password" class="form-control" placeholder="•••••••••"></div>
-												</div>
-												<p class="forgot-password-message"><a href="#forgot">Forgot password?</a></p>
-											</div>
-											<div class="page-card-actions">
-												<button class="btn btn-sm btn-default btn-block btn-login" type="submit">Continue</button>
-												<a class="btn btn-sm btn-default btn-block btn-login-option" href="#login-with-email-link" style="margin-top:10px">Login with Email Link</a>
-											</div>
-										</form>
+										<div class="page-card-actions">
+											<button class="btn btn-sm btn-default btn-block btn-login" type="submit" id="continue">Continue</button>
+											<a href="#login-with-email-link" class="btn btn-block btn-default btn-sm btn-login-option btn-login-with-email-link" id="email-link">Login with Email Link</a>
+										</div>
+									</form>
+								</div>
+							</section>
+							<section class="for-forgot">
+								<div class="login-content page-card">
+									<div class="page-card-head">
+										<img class="app-logo" alt="" src="data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='32' height='32'%3E%3Crect width='32' height='32' rx='8' fill='%23999'/%3E%3C/svg%3E">
+										<div class="page-card-head-text">
+											<h4 id="forgot-title">Forgot Password?</h4>
+											<p class="page-card-subtitle">Please enter your email, we'll send you password reset link</p>
+										</div>
 									</div>
-								</section>
-							</div>
+									<form class="form-signin form-forgot" onsubmit="return false">
+										<div class="page-card-body">
+											<div class="form-group">
+												<label class="form-label" for="forgot_email">Email</label>
+												<div class="email-field">
+													<input type="email" id="forgot_email" class="form-control" placeholder="jane@example.com">
+													<svg class="field-icon email-icon" width="16" height="16" viewBox="0 0 16 16"><rect x="2" y="3.5" width="12" height="9" rx="1.5"/><path d="m2.5 4.5 5.5 4 5.5-4"/></svg>
+												</div>
+											</div>
+										</div>
+										<div class="page-card-actions">
+											<button class="btn btn-sm btn-primary btn-block btn-signup btn-forgot" type="submit" id="send-link">Send Link</button>
+										</div>
+									</form>
+									<div class="text-center sign-up-message"><a href="#login">Back to sign in</a></div>
+								</div>
+							</section>
 						</div>
-					</main>
+					</div>
+					<p class="cvt-login-footer" id="footer">&copy; 2026 Luuka ERP</p>
 				</div>
 			</div>
-		</main>
-	</div>
+		</div>
+	</main>
 </div>
 <script>
-	if (new URLSearchParams(location.search).get("image")) {
-		const wrapper = document.getElementById("wrapper");
-		wrapper.classList.add("cvt-login-has-image");
-		document.getElementById("brand").style.setProperty(
-			"--cvt-login-image",
-			"url('data:image/svg+xml;utf8,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22800%22 height=%22800%22%3E%3Crect width=%22800%22 height=%22800%22 fill=%22%23f6921e%22/%3E%3Ccircle cx=%22600%22 cy=%22200%22 r=%22260%22 fill=%22%23eaa51a%22/%3E%3C/svg%3E')"
-		);
+	// What varies between previews: a photo, or no logo.
+	(function () {
+		const options = new URLSearchParams(location.search);
+		const page = document.getElementById("cvt-login");
+		const PHOTOS = {
+			big: "data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='2000' height='1250'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='1' y2='1'%3E%3Cstop offset='0' stop-color='%232F64B0'/%3E%3Cstop offset='1' stop-color='%230E213D'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='2000' height='1250' fill='url(%23g)'/%3E%3Ccircle cx='1500' cy='320' r='420' fill='%23EAA51A' opacity='.35'/%3E%3C/svg%3E",
+			small: document.getElementById("logo").getAttribute("src"),
+		};
+		if (PHOTOS[options.get("photo")]) page.setAttribute("data-photo", PHOTOS[options.get("photo")]);
+		if (options.get("nologo")) {
+			document.getElementById("logo").remove();
+			page.classList.remove("cvt-login-has-logo");
+		}
+	})();
+
+	// Frappe's login.js, as far as switching steps: one section at a time, by the #hash.
+	function route() {
+		const step = location.hash.slice(1) || "login";
+		document.querySelectorAll("section").forEach((section) => (section.style.display = "none"));
+		const section = document.querySelector(step === "forgot" ? ".for-forgot" : ".for-login");
+		section.style.display = "block";
 	}
+	route();
+	window.addEventListener("hashchange", route);
 </script>
+<script>load_app_file("/cyvetech_ui/public/js/cyvetech_ui_login.js")</script>
 </body>
 </html>

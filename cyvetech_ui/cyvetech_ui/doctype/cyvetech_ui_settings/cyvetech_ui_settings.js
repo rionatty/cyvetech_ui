@@ -29,6 +29,37 @@ frappe.ui.form.on("CyveTech UI Settings", {
 	...Object.fromEntries(CVT_THEME_FIELDS.map((fieldname) => [fieldname, (frm) => render_preview(frm)])),
 });
 
+// Frappe's desktop shows the modules of a hidden group (an app or a folder)
+// on their own instead of hiding them, which is rarely what unticking the
+// group means: offer to take them off the desk too, and to bring them back.
+frappe.ui.form.on("CyveTech Desk Module", {
+	show_on_desk(frm, cdt, cdn) {
+		const group = locals[cdt][cdn];
+		if (!["App", "Folder"].includes(group.icon_type)) return;
+		const members = (frm.doc.desk_modules || []).filter((row) => row.group === group.module);
+		const shown = members.filter((row) => row.show_on_desk);
+		if (!group.show_on_desk && shown.length) {
+			frappe.confirm(
+				__("Take the {0} modules in {1} off the desk too? If you don't, they show on the desk on their own.", [
+					shown.length,
+					frappe.utils.escape_html(group.module),
+				]),
+				() => set_shown(frm, shown, 0)
+			);
+		} else if (group.show_on_desk && members.length && !shown.length) {
+			frappe.confirm(
+				__("Show the {0} modules in {1} again?", [members.length, frappe.utils.escape_html(group.module)]),
+				() => set_shown(frm, members, 1)
+			);
+		}
+	},
+});
+
+function set_shown(frm, rows, value) {
+	rows.forEach((row) => frappe.model.set_value(row.doctype, row.name, "show_on_desk", value));
+	frm.refresh_field("desk_modules");
+}
+
 function reset_colors(frm) {
 	frappe.confirm(__("Put the desk, chart and sign-in colors back to CyveTech's defaults?"), () => {
 		frappe.xcall("cyvetech_ui.cyvetech_ui.settings.color_defaults").then((defaults) => {
@@ -51,7 +82,9 @@ function render_modules_help(frm) {
 	if (!field) return;
 	const has_icons = frappe.boot.desktop_icons !== undefined;
 	const message = has_icons
-		? __("The tiles on everyone's desktop. Load the current list, untick the modules that should not show, and save.")
+		? __(
+				"Every tile on everyone's desktop, each module listed under its group (an app or a folder). Load the current list, untick the modules that should not show, and save."
+		  )
 		: __("This version of Frappe has no desktop tiles to choose from, so this section does nothing here.");
 	field.$wrapper.html(`
 		<div class="text-muted small" style="margin-bottom: 10px">${frappe.utils.escape_html(message)}</div>

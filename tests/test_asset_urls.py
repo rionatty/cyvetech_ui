@@ -55,8 +55,11 @@ class Hooks(unittest.TestCase):
 			path = url.split("?")[0][len(asset_urls.PREFIX) :]
 			self.assertTrue(os.path.isfile(os.path.join(asset_urls.PUBLIC, *path.split("/"))), path)
 
-	def test_the_sign_in_page_asks_for_its_stylesheet_the_same_way(self):
+	def test_the_sign_in_page_asks_for_its_stylesheet_and_script_the_same_way(self):
 		template = os.path.join(os.path.dirname(asset_urls.PUBLIC), "www", "login.html")
 		with open(template, encoding="utf-8") as page:
-			self.assertIn('href="{{ cvt.stylesheet }}"', page.read())
+			source = page.read()
+		self.assertIn('href="{{ cvt.stylesheet }}"', source)
+		self.assertIn('src="{{ cvt.script }}"', source)
 		self.assertRegex(asset_urls.versioned("/assets/cyvetech_ui/css/cyvetech_ui_login.css"), VERSIONED)
+		self.assertRegex(asset_urls.versioned("/assets/cyvetech_ui/js/cyvetech_ui_login.js"), VERSIONED)

@@ -13,11 +13,11 @@ Built for Frappe / ERPNext **v16**. It installs on v15 too, where everything exc
 | 1 | **Desk colors.** Pick the left sidebar color, the selected-item highlight and the page background (the central area). Sidebar text switches between white and dark automatically so it always stays readable. | Settings → Desk Theme |
 | 2 | **Smooth tiles.** Rounded corners on the desktop's app tiles and on workspace cards (number cards, shortcuts, link lists, charts), with an adjustable radius. | Settings → Desk Theme |
 | 3 | **Chart colors.** An eight-color palette for every chart on the desk, checked for color-blind readers. A single-series chart takes a color from its title, so charts side by side look different and each one keeps its color. Charts that choose their own colors on purpose (red for overdue) keep them. | Settings → Charts |
-| 4 | **Branded sign-in page.** A brand panel beside Frappe's own sign-in card, with a logo, heading, tagline, optional background picture, and your panel, button and page colors. | Settings → Sign-in Page |
-| 5 | **Navigation logo and browser icon.** Replace the ERPNext and Frappe logos (the "E") in the app switcher, the desktop's top bar and the sign-in page, and set the browser-tab icon (favicon). Optionally rename "ERPNext" to your product name. | Settings → Branding |
-| 6 | **My Alerts.** A panel in the bottom-right corner showing each user's own open assignments ("overdue by 8 days"), notifications and alerts, most urgent first. Admins can send an alert to specific users or roles with **CyveTech User Alert**. | Settings → Alerts, and CyveTech User Alert |
-| 7 | **Desk modules.** Choose which module tiles show on everyone's desktop. | Settings → Desk Modules |
-| 8 | **Pop-ups.** New notifications and alerts pop up the moment they arrive (within a minute if the site's realtime server is down). Important alerts stay until closed. Urgent ones must be acknowledged. An alert sent while someone was away pops up the next time they open the desk. | Settings → Alerts |
+| 4 | **Branded sign-in page.** One card with your logo, a heading and Frappe's own sign-in form, over a backdrop in your brand colors, or over a full-screen photo of your choice. | Settings → Sign-in Page |
+| 5 | **Navigation logo and browser icon.** Replace the ERPNext and Frappe logos (the "E") on the desktop's top bar, the loading screen, the app switcher and the sign-in page, put your mark at the top of the navigation pane, and set the browser-tab icon (favicon). Optionally rename "ERPNext" to your product name. | Settings → Branding |
+| 6 | **My Alerts.** A panel in the bottom-right corner showing each user's own open assignments ("overdue by 8 days"), notifications and alerts, most urgent first, straight from ERPNext's own records. Admins can also send an alert to specific users or roles with **CyveTech User Alert**. | Settings → Alerts, and CyveTech User Alert |
+| 7 | **Desk modules.** Choose which tiles show on everyone's desktop: every module, listed under its app or folder. | Settings → Desk Modules |
+| 8 | **Pop-ups.** New notifications and alerts pop up the moment they arrive (within a minute if the site's realtime server is down). Alerts from ERPNext's own Notification rules and from CyveTech User Alert always pop up, and one that arrived while someone was away pops up the next time they open the desk. Sent alerts marked Important stay until closed; Urgent ones must be acknowledged. | Settings → Alerts |
 
 ---
 
@@ -46,13 +46,15 @@ cd ~/frappe-bench/apps/cyvetech_ui && git pull && cd ~/frappe-bench && bench --s
 
 Open **CyveTech UI Settings** from the search bar (System Managers only).
 
-1. **Branding:** upload the navigation logo (a wide logo, about 240 × 64 px) and a square browser icon. Upload both as **public** files: the sign-in page and the browser tab are seen before anyone logs in.
+1. **Branding:** upload the navigation logo (a wide logo, about 240 × 64 px) and a square browser icon. The browser icon also goes at the top of the navigation pane, where there's only room for a square. Upload both as **public** files: the sign-in page and the browser tab are seen before anyone logs in.
 2. **Desk Theme:** the defaults are CyveTech navy and gold. The preview updates as you type.
-3. **Sign-in Page:** leave the sign-in logo blank to reuse the navigation logo.
-4. **Desk Modules:** click **Load Desk Modules**, untick what should not show, and save.
+3. **Sign-in Page:** leave the sign-in logo blank to reuse the navigation logo. The background photo is optional: use a photo at least 1600 px wide. A smaller picture, or the logo itself, isn't used, because stretched across the screen it would look blurry.
+4. **Desk Modules:** click **Load Desk Modules**, untick what should not show, and save. Every tile is listed, each module under its group: an app (such as ERPNext) or a folder (such as Accounting). A hidden group doesn't hide its modules: Frappe shows them on the desk one by one instead, which is how ERPNext ships, with its own tile hidden. So when you untick a group, you're asked whether to take its modules off the desk too.
 5. **Alerts:** click **Send Me a Test Alert** to see a pop-up and the My Alerts panel working end to end.
 
 Save once, and every user sees the change on their next page load.
+
+**ERPNext's own alerts:** any Notification rule (search "Notification") whose **Channel** is "System Notification", or that has **Send System Notification** ticked, shows in the bell and My Alerts and pops up with its message. With the default channel, Email, and the box unticked, it only sends an email.
 
 **Sending an alert:** create a **CyveTech User Alert**, pick the users and/or roles, choose a priority (Normal, Important, Urgent) and optionally link a document, then **Send**. Each recipient gets it in the bell menu and in My Alerts, as a pop-up. Recipients can only read alerts sent to them. Cancelling an alert withdraws it from everyone who hasn't read it yet.
 
@@ -78,13 +80,13 @@ The Python tests run without a bench. They cover the rules behind the colors, al
 python -m unittest discover -s tests -v
 ```
 
-The desk scripts and stylesheet are tested in a real browser, against a mock of the v16 desk. The mock includes Stock Addon's and HRMS Addon's theme rules, so the tests also prove this app's colors and corners win over them. A layout test checks where My Alerts sits beside Frappe's Getting Started checklist at desktop and phone widths. Serve the repository and open the test page:
+The desk scripts and stylesheets are tested in a real browser, against a mock of the v16 desk. The mock includes Stock Addon's and HRMS Addon's theme rules, so the tests also prove this app's colors and corners win over them. A layout test checks where My Alerts sits beside Frappe's Getting Started checklist at desktop and phone widths, and the sign-in tests run against Frappe's own sign-in markup and styles. Serve the repository with the browser's cache switched off, so every run loads the files as they are on disk:
 
 ```bash
-python -m http.server 8765 --directory .
+python tests/browser/serve.py
 ```
 
-Then open <http://localhost:8765/tests/browser/>. `tests/browser/login_preview.html` shows the sign-in page with the shipped colors (add `?image=1` for the brand panel with a picture).
+Then open <http://localhost:8766/tests/browser/>. `tests/browser/login_preview.html` shows the sign-in page with the shipped colors: add `?photo=big` for a background photo, or `#forgot` for the forgot-password step.
 
 This app uses `pre-commit` for formatting and linting:
 

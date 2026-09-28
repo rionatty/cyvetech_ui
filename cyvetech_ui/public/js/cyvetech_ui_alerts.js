@@ -10,10 +10,12 @@
 //
 // POP-UPS. Whatever is new since the last answer pops up:
 //
-//   * an alert an administrator sent, always. Normal ones close by
-//     themselves; Important ones stay until closed; Urgent ones open a
-//     message the user has to acknowledge. An alert sent while the user was
-//     away pops up the next time they open the desk.
+//   * an alert, always: one from ERPNext's own Notification rules (a
+//     Notification Log of type "Alert"), or one an administrator sent from
+//     CyveTech User Alert. They close by themselves, except sent alerts
+//     marked Important, which stay until closed, and Urgent, which open a
+//     message the user has to acknowledge. An alert that arrived while the
+//     user was away pops up the next time they open the desk.
 //   * any other new notification or assignment, if the settings say so.
 //
 // KEEPING UP. Frappe publishes "notification" to a user the moment a
@@ -305,8 +307,10 @@
 	}
 
 	// ── pop-ups ─────────────────────────────────────────────────────────
-	function is_sent_alert(alert) {
-		return !!alert.alert;
+	// An alert: from ERPNext's Notification rules, or sent from CyveTech User
+	// Alert (those carry the sent alert's priority and message in .alert).
+	function is_alert(alert) {
+		return !!alert.alert || (alert.kind === "notification" && alert.type === "Alert");
 	}
 
 	// What in this answer is news.
@@ -314,13 +318,13 @@
 		const popped = popped_keys();
 		if (known === null) {
 			// The first answer is the state of things, not news — except alerts
-			// sent to this user that never popped up (they arrived while away).
-			return alerts.filter((a) => is_sent_alert(a) && a.unread && !popped.has(a.key));
+			// that never popped up (they arrived while the user was away).
+			return alerts.filter((a) => is_alert(a) && a.unread && !popped.has(a.key));
 		}
 		const seen = new Set(known);
 		return alerts.filter((a) => {
 			if (seen.has(a.key)) return false;
-			if (is_sent_alert(a)) return a.unread && !popped.has(a.key);
+			if (is_alert(a)) return a.unread && !popped.has(a.key);
 			return conf.popup && (a.kind === "assignment" || a.unread);
 		});
 	}
@@ -355,13 +359,14 @@
 
 	function kicker(alert) {
 		if (alert.alert) return alert.alert.priority === "Important" ? __("Important alert") : __("Alert");
+		if (is_alert(alert)) return __("Alert");
 		return alert.kind === "assignment" ? __("New assignment") : __("New notification");
 	}
 
 	function popup(alert) {
 		const sent = alert.alert;
 		const sticky = !!(sent && sent.priority === "Important");
-		const body = sent ? plain_text(sent.message) : meta_line(alert);
+		const body = sent ? plain_text(sent.message) : alert.message || meta_line(alert);
 		const opens = !!(alert.doctype && alert.docname);
 		const card = document.createElement("div");
 		card.className = "cvt-popup cvt-band-" + (alert.urgency || "none");
@@ -399,7 +404,7 @@
 			setTimeout(close, SECONDS * 3000); // in case animations are switched off
 		}
 		stack().appendChild(card);
-		if (sent) remember_popped(alert.key);
+		if (is_alert(alert)) remember_popped(alert.key);
 	}
 
 	function more(count) {

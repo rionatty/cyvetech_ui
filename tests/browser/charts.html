@@ -34,6 +34,7 @@
 <div class="widget"><div class="widget-title">Purchase Order Trends</div><div class="widget-body" id="purchase"></div></div>
 <div id="results"></div>
 <script>
+try {
 	const one = { labels: ["Jan", "Feb"], datasets: [{ name: "Amount", values: [1, 2] }] };
 	const two = { labels: ["Jan", "Feb"], datasets: [{ name: "Ordered", values: [1, 2] }, { name: "Billed", values: [2, 1] }] };
 	const colors = (chart) => chart.options.colors;
@@ -97,6 +98,10 @@
 	check("a chart with no options is passed through untouched", chart.options === null, chart.options);
 
 	report();
+} catch (error) {
+	check("the test ran to the end", false, String((error && error.stack) || error));
+	report();
+}
 </script>
 </body>
 </html>

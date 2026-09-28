@@ -79,10 +79,12 @@ def _assignments(user, day):
 def _notifications(user):
 	"""The user's notifications, newest first, read or not: a read one is still
 	what happened. The unread are marked and counted on their own."""
+	body = _body_field()
 	rows = frappe.get_all(
 		"Notification Log",
 		filters={"for_user": user},
-		fields=["name", "subject", "type", "document_type", "document_name", "from_user", "creation", "read"],
+		fields=["name", "subject", "type", "document_type", "document_name", "from_user", "creation", "read"]
+		+ ([body] if body else []),
 		order_by="creation desc",
 		limit=LIMIT,
 	)
@@ -106,6 +108,9 @@ def _notifications(user):
 				"urgency": rules.alert_band(alert.priority) if alert else rules.NONE,
 				"when": "",
 				"type": row.type,
+				# what the notification says beyond its title: an ERPNext Notification
+				# rule's message, the text of a mention or comment
+				"message": rules.title(strip_html(row.get(body) or ""), limit=240) if body else "",
 				"unread": 0 if row.read else 1,
 				"from_user": row.from_user,
 				# set only for alerts sent from CyveTech User Alert
@@ -115,6 +120,17 @@ def _notifications(user):
 			}
 		)
 	return out
+
+
+def _body_field():
+	"""Where a Notification Log keeps its message: `description` on Frappe v16,
+	`email_content` before it. On v16 email_content holds a rule's email text,
+	which can be its placeholder, and Frappe's own bell shows description only."""
+	try:
+		meta = frappe.get_meta("Notification Log")
+		return next((f for f in ("description", "email_content") if meta.has_field(f)), None)
+	except Exception:
+		return None
 
 
 def _alerts_behind(rows):

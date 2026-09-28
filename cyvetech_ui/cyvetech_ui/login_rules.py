@@ -20,7 +20,13 @@ from cyvetech_ui.cyvetech_ui import color_rules
 
 DEFAULT_HEADING = "Welcome back"
 DEFAULT_TAGLINE = "Sign in to pick up where you left off."
-FALLBACK = {"panel": "#16335E", "button": "#16335E", "background": "#F4F6FA"}
+FALLBACK = {"brand": "#16335E", "accent": "#EAA51A", "button": "#16335E", "background": "#F4F6FA"}
+
+# How strongly the backdrop behind the card takes the brand's colors, as the
+# alpha of an 8-digit hex color: soft pools of color, and a faint dot grid.
+GLOW_ALPHA = "2E"  # 18%
+ACCENT_GLOW_ALPHA = "24"  # 14%
+DOTS_ALPHA = "1A"  # 10%
 
 # a guest on the sign-in page can load these; /private/files/ it cannot
 IMAGE_SOURCES = ("/files/", "/assets/", "https://")
@@ -42,25 +48,35 @@ def safe_url(url):
 
 def look(settings):
 	"""What login.html needs, from the merged settings (settings.get_settings)."""
-	panel = safe_color(settings.get("login_panel_color"), FALLBACK["panel"])
+	brand = safe_color(settings.get("login_panel_color"), FALLBACK["brand"])
+	accent = safe_color(settings.get("highlight_color"), FALLBACK["accent"])
 	button = safe_color(settings.get("login_button_color"), FALLBACK["button"])
 	background = safe_color(settings.get("login_background_color"), FALLBACK["background"])
+	on_background = color_rules.readable_text(background)
 	colors = {
-		"--cvt-login-panel": panel,
-		"--cvt-login-panel-deep": color_rules.mix(panel, "#000000", 0.35),
-		"--cvt-login-panel-text": color_rules.readable_text(panel),
+		"--cvt-login-brand": brand,
+		"--cvt-login-accent": accent,
+		"--cvt-login-glow": brand + GLOW_ALPHA,
+		"--cvt-login-glow-accent": accent + ACCENT_GLOW_ALPHA,
 		"--cvt-login-button": button,
 		"--cvt-login-button-hover": color_rules.mix(button, "#000000", 0.18),
 		"--cvt-login-button-text": color_rules.readable_text(button),
 		# links sit on the white card: the button color only where it reads there
 		"--cvt-login-link": button if color_rules.contrast(button, "#FFFFFF") >= 4.5 else "#1F2937",
 		"--cvt-login-background": background,
+		# the footer and the dot grid sit on the page background itself
+		"--cvt-login-on-background": on_background,
+		"--cvt-login-dots": on_background + DOTS_ALPHA,
 	}
+	logos = {safe_url(settings.get("login_logo")), safe_url(settings.get("brand_logo"))} - {""}
+	image = safe_url(settings.get("login_image"))
+	if image in logos:
+		image = ""  # a logo stretched to fill the screen only ever looks blurry
 	return {
 		"enabled": 1 if settings.get("login_enabled") else 0,
-		# the sign-in logo, else the navigation logo, else Frappe's own
+		# the sign-in logo, else the navigation logo, else none
 		"logo": safe_url(settings.get("login_logo")) or safe_url(settings.get("brand_logo")),
-		"image": safe_url(settings.get("login_image")),
+		"image": image,
 		"heading": (settings.get("login_heading") or "").strip() or DEFAULT_HEADING,
 		"tagline": (settings.get("login_tagline") or "").strip() or DEFAULT_TAGLINE,
 		"colors": {name: value.upper() for name, value in colors.items()},

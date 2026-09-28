@@ -31,9 +31,21 @@ class Branding(Base):
 
 	def test_the_logo_goes_everywhere_frappe_reads_it(self):
 		changed = branding.apply({"brand_logo": "/files/brand.png", "favicon": "/files/fav.png", "product_name": "Luuka ERP"})
-		self.assertEqual(frappe.singles[WS], {"app_logo": "/files/brand.png", "favicon": "/files/fav.png", "app_name": "Luuka ERP"})
+		self.assertEqual(
+			frappe.singles[WS],
+			{"app_logo": "/files/brand.png", "splash_image": "/files/brand.png", "favicon": "/files/fav.png", "app_name": "Luuka ERP"},
+		)
 		self.assertEqual(frappe.singles[NAV], {"app_logo": "/files/brand.png"})
-		self.assertEqual(sorted(changed), ["Navbar Settings.app_logo", "Website Settings.app_logo", "Website Settings.app_name", "Website Settings.favicon"])
+		self.assertEqual(
+			sorted(changed),
+			[
+				"Navbar Settings.app_logo",
+				"Website Settings.app_logo",
+				"Website Settings.app_name",
+				"Website Settings.favicon",
+				"Website Settings.splash_image",  # the loading screen, in place of ERPNext's "E"
+			],
+		)
 
 	def test_a_repeat_writes_nothing(self):
 		branding.apply({"brand_logo": "/files/brand.png"})
@@ -46,8 +58,9 @@ class Branding(Base):
 		frappe.singles[NAV]["app_logo"] = "/files/set-by-hand.png"  # someone changed it since
 		changed = branding.apply({"brand_logo": ""})
 		self.assertIsNone(frappe.singles[WS]["app_logo"])
+		self.assertIsNone(frappe.singles[WS]["splash_image"])
 		self.assertEqual(frappe.singles[NAV]["app_logo"], "/files/set-by-hand.png")
-		self.assertEqual(changed, ["Website Settings.app_logo"])
+		self.assertEqual(changed, ["Website Settings.app_logo", "Website Settings.splash_image"])
 
 	def test_a_logo_never_set_here_is_never_cleared(self):
 		frappe.singles[WS] = {"app_logo": "/files/theirs.png"}
@@ -114,10 +127,20 @@ class DeskModules(Base):
 			for module, show in pairs
 		]
 
-	def test_the_table_lists_the_top_level_tiles_only(self):
+	def test_the_table_lists_every_shared_tile_each_under_its_group(self):
+		frappe.tables["Desktop Icon"].append(
+			{"name": "Frappe HR", "label": "Frappe HR", "app": "hrms", "icon_type": "App", "hidden": 0, "standard": 1, "owner": "Administrator"}
+		)
 		doc = settings_controller.CyveTechUISettings({"desk_modules": []})
 		desk_modules.refresh_rows(doc)
-		self.assertEqual([row["module"] for row in doc.get("desk_modules")], ["Selling", "Quality"])
+		rows = [(row["module"], row["group"]) for row in doc.get("desk_modules")]
+		# a user's own shortcut is theirs, not the desk's
+		self.assertEqual(rows, [("Selling", ""), ("Quality", ""), ("Frappe HR", ""), ("Leaves", "Frappe HR")])
+
+	def test_a_module_inside_a_group_can_be_hidden(self):
+		self.rows(("Selling", 1), ("Quality", 1), ("Leaves", 0))
+		self.assertTrue(desk_modules.apply())
+		self.assertEqual(frappe.writes, [("value", "Desktop Icon", "Leaves", "hidden", 1)])
 
 	def test_unticking_hides_the_tile(self):
 		self.rows(("Selling", 1), ("Quality", 0))
@@ -171,6 +194,10 @@ class MyAlerts(Base):
 			 "document_type": "CyveTech User Alert", "document_name": "ALERT-1", "from_user": "admin@example.com", "creation": "2026-09-28", "read": 0},
 			{"name": "NL-4", "for_user": "someone@example.com", "subject": "Not Jane's", "type": "Alert",
 			 "document_type": "Task", "document_name": "T-2", "from_user": "x", "creation": "2026-09-28", "read": 0},
+			# from one of ERPNext's own Notification rules (Channel: System Notification)
+			{"name": "NL-5", "for_user": "jane@example.com", "subject": "Cement is below its reorder level", "type": "Alert",
+			 "document_type": "Item", "document_name": "CEMENT-50KG", "from_user": "Administrator", "creation": "2026-09-28", "read": 0,
+			 "description": "<p>Only <b>12 bags</b> left in Stores - MI.</p>", "email_content": "Add your message here"},
 		]
 		frappe.tables["CyveTech User Alert"] = [
 			{"name": "ALERT-1", "priority": "Urgent", "message": "<p>Save your work.</p>", "reference_doctype": "Sales Order", "reference_name": "SO-1"},
@@ -208,6 +235,19 @@ class MyAlerts(Base):
 		keys = [a["key"] for a in alerts.my_alerts()["alerts"]]
 		self.assertNotIn("NL-1", keys)
 
+	def test_a_standard_erpnext_alert_carries_its_message(self):
+		row = next(a for a in alerts.my_alerts()["alerts"] if a["key"] == "NL-5")
+		self.assertEqual((row["type"], row["unread"], row["alert"]), ("Alert", 1, None))
+		self.assertEqual(row["message"], "Only 12 bags left in Stores - MI.")
+		self.assertEqual((row["doctype"], row["docname"]), ("Item", "CEMENT-50KG"))
+
+	def test_on_frappe_v15_the_message_comes_from_email_content(self):
+		frappe.meta_fields = {"Notification Log": {"subject", "email_content"}}
+		row = next(a for a in alerts.my_alerts()["alerts"] if a["key"] == "NL-5")
+		self.assertEqual(row["message"], "Add your message here")
+		log_query = next(q for q in frappe.queries if q.doctype == "Notification Log")
+		self.assertNotIn("description", log_query.fields)  # v15 has no such column
+
 	def test_a_sent_alert_carries_its_priority_and_opens_its_document(self):
 		row = next(a for a in alerts.my_alerts()["alerts"] if a["key"] == "NL-3")
 		self.assertEqual(row["urgency"], "overdue")  # Urgent
@@ -222,14 +262,14 @@ class MyAlerts(Base):
 
 	def test_the_count_is_what_is_outstanding_and_the_most_urgent_first(self):
 		result = alerts.my_alerts()
-		self.assertEqual(result["total"], 3)  # two open to-dos and the unread alert; the read mention is not counted
+		self.assertEqual(result["total"], 4)  # two open to-dos and the two unread alerts; the read mention is not counted
 		self.assertEqual(result["band"], "overdue")
 		self.assertEqual(result["alerts"][0]["urgency"], "overdue")
 
 	def test_the_limit_is_clamped(self):
 		self.assertEqual(len(alerts.my_alerts(limit=1)["alerts"]), 1)
-		self.assertEqual(len(alerts.my_alerts(limit=0)["alerts"]), 4)
-		self.assertEqual(len(alerts.my_alerts(limit="lots")["alerts"]), 4)
+		self.assertEqual(len(alerts.my_alerts(limit=0)["alerts"]), 5)
+		self.assertEqual(len(alerts.my_alerts(limit="lots")["alerts"]), 5)
 
 
 class AlertPermissions(Base):
@@ -363,6 +403,7 @@ class Boot(Base):
 		self.assertEqual(payload["charts"]["palette"], [c.lower() for c in settings.CHART_PALETTE])
 		self.assertEqual(payload["charts"]["dark_palette"], settings.CHART_PALETTE_DARK)
 		self.assertEqual(payload["alerts"], {"panel": 1, "popup": 1, "seconds": 8, "sound": 1})
+		self.assertEqual(payload["branding"]["sidebar_logo"], 1)  # the logo in the navigation pane, on out of the box
 		self.assertEqual(payload["hidden_modules"], [])
 
 	def test_a_custom_palette_is_used_in_both_modes(self):

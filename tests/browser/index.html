@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <title>CyveTech UI browser tests</title>
 <!--
-	Runs the desk, chart, alert and layout test pages and sums them up. Serve the
+	Runs the desk, chart, alert, layout and sign-in test pages and sums them up. Serve the
 	repository and open this page:
 
 		python -m http.server 8765 --directory .
@@ -23,7 +23,7 @@
 <h1>CyveTech UI browser tests</h1>
 <table><tbody id="rows"></tbody></table>
 <script>
-	const SUITES = ["desk.html", "charts.html", "alerts.html", "layout.html"];
+	const SUITES = ["desk.html", "charts.html", "alerts.html", "layout.html", "signin.html"];
 
 	function run(page) {
 		return new Promise((resolve) => {

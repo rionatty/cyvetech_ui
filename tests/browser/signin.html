@@ -1,0 +1,164 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>sign-in tests</title>
+<!--
+	The sign-in page's stylesheet and script (cyvetech_ui_login.css and
+	cyvetech_ui_login.js) on login_preview.html, which carries the markup
+	Frappe v16 renders and the rules of Frappe's own sign-in stylesheet that
+	they meet. Each case opens the preview in a frame of a given size.
+-->
+<script src="harness.js"></script>
+<style>
+	body { font: 13px system-ui; margin: 16px; }
+	iframe { display: block; margin-bottom: 8px; border: 1px solid #ddd; }
+</style>
+</head>
+<body>
+<div id="results"></div>
+<script>
+	const WHITE = "rgb(255, 255, 255)";
+	const BRAND = "rgb(22, 51, 94)";
+	const BACKGROUND = "rgb(244, 246, 250)";
+
+	// the preview, with this page's own ?use: swaps passed on
+	function preview(extra, hash) {
+		const params = new URLSearchParams(location.search);
+		Object.entries(extra || {}).forEach(([key, value]) => params.set(key, value));
+		const query = params.toString();
+		return "login_preview.html" + (query ? "?" + query : "") + (hash ? "#" + hash : "");
+	}
+
+	async function open(extra, hash, width = 1366, height = 768) {
+		const frame = document.createElement("iframe");
+		frame.width = width;
+		frame.height = height;
+		frame.src = preview(extra, hash);
+		document.body.appendChild(frame);
+		await new Promise((resolve) => frame.addEventListener("load", resolve, { once: true }));
+		await new Promise((resolve) => setTimeout(resolve, 450)); // the card's rise is over
+		return frame.contentWindow;
+	}
+
+	const pause = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+	async function until(test, ms = 2500) {
+		const start = Date.now();
+		while (!test() && Date.now() - start < ms) await pause(25);
+		return test();
+	}
+	const style = (win, selector, property, pseudo) => {
+		const el = win.document.querySelector(selector);
+		return el ? win.getComputedStyle(el, pseudo || null).getPropertyValue(property).trim() : "(no element)";
+	};
+	const box = (win, selector) => win.document.querySelector(selector).getBoundingClientRect();
+	const shown = (win, selector) => {
+		const el = win.document.querySelector(selector);
+		return !!el && el.getClientRects().length > 0;
+	};
+	// a color drawn at some opacity over the background, as the eye gets it
+	const over = (color, opacity, background) => {
+		const [c, b] = [rgba(color), rgba(background)];
+		const mix = (x, y) => Math.round(x * opacity + y * (1 - opacity));
+		return `rgb(${mix(c.r, b.r)}, ${mix(c.g, b.g)}, ${mix(c.b, b.b)})`;
+	};
+
+	(async function () {
+		// ── a desktop window, signing in ───────────────────────────────
+		let win = await open();
+		const doc = win.document;
+		const card = box(win, ".cvt-login-card");
+		const middle = doc.documentElement.clientWidth / 2;
+		check("one card in the middle of the window", Math.abs((card.left + card.right) / 2 - middle) <= 2, [card.left, card.right, middle]);
+		check("no half-page brand panel", !doc.querySelector(".cvt-login-brand, aside"), "found one");
+		check("the card is solid white", style(win, ".cvt-login-card", "background-color") === WHITE, style(win, ".cvt-login-card", "background-color"));
+		check("Frappe's own card inside it adds no second frame",
+			style(win, ".for-login .page-card", "background-color") === "rgba(0, 0, 0, 0)" &&
+				style(win, ".for-login .page-card", "border-top-width") === "0px" &&
+				style(win, ".for-login .page-card", "box-shadow") === "none",
+			[style(win, ".for-login .page-card", "background-color"), style(win, ".for-login .page-card", "border-top-width"), style(win, ".for-login .page-card", "box-shadow")]);
+		check("the brand's accent line runs across the top of the card",
+			style(win, ".cvt-login-card", "content", "::before") !== "none" &&
+				style(win, ".cvt-login-card", "height", "::before") === "4px" &&
+				style(win, ".cvt-login-card", "background-image", "::before").includes("linear-gradient"),
+			[style(win, ".cvt-login-card", "content", "::before"), style(win, ".cvt-login-card", "background-image", "::before")]);
+		const backdrop = style(win, ".cvt-login-backdrop", "background-image");
+		check("the backdrop takes the brand's colors", (backdrop.match(/radial-gradient/g) || []).length === 2 && backdrop.includes("rgba(22, 51, 94"), backdrop);
+		check("with a fine dot grid over it", style(win, ".cvt-login-backdrop", "background-image", "::after").includes("radial-gradient"),
+			style(win, ".cvt-login-backdrop", "background-image", "::after"));
+
+		const logo = doc.querySelector(".cvt-login-logo");
+		const drawn = logo.getBoundingClientRect();
+		check("the logo keeps its own proportions",
+			Math.abs(drawn.width / drawn.height - logo.naturalWidth / logo.naturalHeight) < 0.03, [drawn.width, drawn.height, logo.naturalWidth, logo.naturalHeight]);
+		check("at a readable size", drawn.height >= 40 && drawn.height <= 56, drawn.height);
+		check("the heading shows while signing in", shown(win, ".cvt-login-heading"), "hidden");
+		check("and Frappe's own heading for that step is out of the way", !shown(win, "#login-head"), "shown");
+
+		check("the fields are a comfortable 42px tall", style(win, "#login_email", "height") === "42px", style(win, "#login_email", "height"));
+		check("they keep the room Frappe leaves for their icons", style(win, "#login_email", "padding-left") === "38px", style(win, "#login_email", "padding-left"));
+		const field = box(win, "#login_email");
+		const icon = box(win, "#email-icon");
+		check("and the icon sits inside its field", icon.left > field.left && icon.right < field.left + 38 && icon.top > field.top && icon.bottom < field.bottom,
+			[field.left, field.top, field.bottom, icon.left, icon.right, icon.top, icon.bottom]);
+		check("labels are in dark ink", contrast(style(win, ".for-login .form-label", "color"), WHITE) >= 7, style(win, ".for-login .form-label", "color"));
+
+		check("Continue takes the button color", style(win, "#continue", "background-color") === BRAND, style(win, "#continue", "background-color"));
+		check("its text reads on it", contrast(style(win, "#continue", "color"), style(win, "#continue", "background-color")) >= 4.5, style(win, "#continue", "color"));
+		check("and it is as tall as the fields", style(win, "#continue", "height") === "42px", style(win, "#continue", "height"));
+		check("Login with Email Link is a quieter outline button",
+			style(win, "#email-link", "background-color") === WHITE && style(win, "#email-link", "border-top-color") === "rgb(213, 220, 230)" && style(win, "#email-link", "height") === "42px",
+			[style(win, "#email-link", "background-color"), style(win, "#email-link", "border-top-color"), style(win, "#email-link", "height")]);
+		check("links take the button color", style(win, "#forgot-link", "color") === BRAND, style(win, "#forgot-link", "color"));
+
+		const footer_ink = over(style(win, "#footer", "color"), parseFloat(style(win, "#footer", "opacity")), BACKGROUND);
+		check("the footer reads on the page background", contrast(footer_ink, BACKGROUND) >= 4.5, footer_ink);
+
+		// ── another step: the heading gives way to Frappe's ────────────
+		win.location.hash = "forgot";
+		await until(() => win.document.getElementById("cvt-login").getAttribute("data-step") === "forgot");
+		check("forgot password: the sign-in heading gives way", !shown(win, ".cvt-login-intro"), "shown");
+		check("forgot password: to Frappe's heading for that step", shown(win, "#forgot-title"), "hidden");
+		check("forgot password: the logo stays", shown(win, ".cvt-login-logo"), "hidden");
+		check("forgot password: Frappe's small logo does not repeat it", !shown(win, ".for-forgot .app-logo"), "shown");
+		check("forgot password: Send Link takes the button color", style(win, "#send-link", "background-color") === BRAND, style(win, "#send-link", "background-color"));
+		win.location.hash = "login";
+		await until(() => win.document.getElementById("cvt-login").getAttribute("data-step") === "login");
+		check("back to signing in: the heading returns", shown(win, ".cvt-login-intro"), "hidden");
+
+		// ── a background photo ─────────────────────────────────────────
+		win = await open({ photo: "big" });
+		const took = await until(() => win.document.getElementById("cvt-login").classList.contains("cvt-login-has-photo"));
+		check("a photo big enough to fill the window is used", took, win.document.getElementById("cvt-login").className);
+		check("full-screen behind the card", style(win, ".cvt-login-backdrop", "background-image").includes("url("), style(win, ".cvt-login-backdrop", "background-image"));
+		check("without the dot grid", style(win, ".cvt-login-backdrop", "display", "::after") === "none", style(win, ".cvt-login-backdrop", "display", "::after"));
+		check("with the footer in white", style(win, "#footer", "color") === WHITE, style(win, "#footer", "color"));
+
+		win = await open({ photo: "small" });
+		await pause(600);
+		check("a small picture set as the photo (like the logo) is not stretched over the page",
+			!win.document.getElementById("cvt-login").classList.contains("cvt-login-has-photo") &&
+				style(win, ".cvt-login-backdrop", "background-image").includes("radial-gradient"),
+			[win.document.getElementById("cvt-login").className, style(win, ".cvt-login-backdrop", "background-image")]);
+
+		// ── a phone ────────────────────────────────────────────────────
+		win = await open({}, "", 390, 844);
+		const page_width = win.document.documentElement.clientWidth;
+		const phone_card = box(win, ".cvt-login-card");
+		check("phone: the card fits the screen with a margin each side", phone_card.left >= 11 && phone_card.right <= page_width - 11, [phone_card.left, phone_card.right, page_width]);
+		check("phone: nothing scrolls sideways", win.document.documentElement.scrollWidth <= page_width, [win.document.documentElement.scrollWidth, page_width]);
+		check("phone: the card starts near the top", phone_card.top <= 40, phone_card.top);
+		check("phone: Frappe's full-screen card is undone", style(win, ".for-login .page-card", "min-height") === "0px", style(win, ".for-login .page-card", "min-height"));
+
+		// ── no logo uploaded ───────────────────────────────────────────
+		win = await open({ nologo: 1 });
+		check("no logo: the heading alone tops the card", !win.document.querySelector(".cvt-login-logo") && shown(win, ".cvt-login-heading"), "");
+
+		report();
+	})().catch((error) => {
+		check("the test ran to the end", false, String((error && error.stack) || error));
+		report();
+	});
+</script>
+</body>
+</html>

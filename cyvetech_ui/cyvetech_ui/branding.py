@@ -14,6 +14,10 @@ different one (checked against Frappe v16.34):
                   Hence both. (The `app_logo_url` hook is no use here: once
                   three or more apps define it, get_app_logo() falls back to
                   Frappe's own logo.)
+               -> Website Settings.splash_image
+                  the loading screen while the desk starts
+                  (templates/includes/splash_screen.html); without it,
+                  ERPNext's `website_context` hook shows its own "E"
 
   favicon      -> Website Settings.favicon
                   www/desk.html and the website pages both print it, and it
@@ -32,7 +36,11 @@ put there: a logo someone set by hand in Website Settings is never wiped.
 import frappe
 
 TARGETS = {
-	"brand_logo": (("Website Settings", "app_logo"), ("Navbar Settings", "app_logo")),
+	"brand_logo": (
+		("Website Settings", "app_logo"),
+		("Navbar Settings", "app_logo"),
+		("Website Settings", "splash_image"),
+	),
 	"favicon": (("Website Settings", "favicon"),),
 	"product_name": (("Website Settings", "app_name"),),
 }

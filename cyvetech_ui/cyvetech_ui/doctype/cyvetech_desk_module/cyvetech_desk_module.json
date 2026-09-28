@@ -6,9 +6,10 @@
  "engine": "InnoDB",
  "field_order": [
   "module",
-  "app",
+  "group",
   "icon_type",
-  "show_on_desk"
+  "show_on_desk",
+  "app"
  ],
  "fields": [
   {
@@ -21,10 +22,11 @@
   },
   {
    "columns": 2,
-   "fieldname": "app",
+   "description": "The app or folder whose tile holds this module.",
+   "fieldname": "group",
    "fieldtype": "Data",
    "in_list_view": 1,
-   "label": "App",
+   "label": "Group",
    "read_only": 1
   },
   {
@@ -42,12 +44,19 @@
    "fieldtype": "Check",
    "in_list_view": 1,
    "label": "Show on Desk"
+  },
+  {
+   "fieldname": "app",
+   "fieldtype": "Data",
+   "in_list_view": 0,
+   "label": "App",
+   "read_only": 1
   }
  ],
  "index_web_pages_for_search": 1,
  "istable": 1,
  "links": [],
- "modified": "2026-09-28 09:00:00.000000",
+ "modified": "2026-09-28 18:00:00.000000",
  "modified_by": "Administrator",
  "module": "CyveTech UI",
  "name": "CyveTech Desk Module",

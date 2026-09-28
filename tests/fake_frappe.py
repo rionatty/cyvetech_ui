@@ -235,6 +235,17 @@ def install():
 			fake.logged.append((self.module, message % args if args else message))
 
 	fake.logger = lambda module=None, *a, **k: Logger(module)
+
+	class Meta:
+		"""frappe.get_meta(doctype), as far as has_field: the fields in fake.meta_fields."""
+
+		def __init__(self, doctype):
+			self.fields = fake.meta_fields.get(doctype, set())
+
+		def has_field(self, fieldname):
+			return fieldname in self.fields
+
+	fake.get_meta = lambda doctype, *a, **k: Meta(doctype)
 	fake.msgprint = lambda *a, **k: fake.messages.append(a[0] if a else k.get("msg"))
 	fake.enqueue = lambda fn, **kwargs: fake.enqueued.append((fn, kwargs))
 	fake.db = FakeDB(fake)
@@ -276,6 +287,7 @@ def reset(fake):
 	fake.cleared = []
 	fake.errors = []
 	fake.logged = []
+	fake.meta_fields = {"Notification Log": {"subject", "description", "email_content"}}  # Frappe v16
 	fake.messages = []
 	fake.enqueued = []
 	fake.inserted = []

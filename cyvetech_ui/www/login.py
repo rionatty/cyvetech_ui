@@ -18,12 +18,15 @@ from cyvetech_ui.cyvetech_ui.settings import get_settings
 
 no_cache = True
 STYLESHEET = "/assets/cyvetech_ui/css/cyvetech_ui_login.css"
+SCRIPT = "/assets/cyvetech_ui/js/cyvetech_ui_login.js"
 
 
 def get_context(context):
 	frappe_login_context(context)
 	cvt = look()
 	cvt["stylesheet"] = versioned(STYLESHEET)
+	cvt["script"] = versioned(SCRIPT)
+	cvt["year"] = frappe.utils.now_datetime().year  # for the footer
 	context.cvt = cvt
 	if cvt["enabled"] and cvt["logo"]:
 		context.logo = cvt["logo"]  # the logo on Frappe's card too

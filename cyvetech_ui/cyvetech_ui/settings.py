@@ -39,6 +39,7 @@ DEFAULTS = {
 	"favicon": "",
 	"product_name": "",
 	"replace_all_app_logos": 0,
+	"sidebar_logo": 1,
 	# Desk colors and tiles
 	"apply_theme": 1,
 	"sidebar_color": THEME_DEFAULTS["sidebar"],
@@ -71,6 +72,7 @@ DEFAULTS = {
 
 CHECKS = {
 	"replace_all_app_logos",
+	"sidebar_logo",
 	"apply_theme",
 	"color_top_bar",
 	"rounded_tiles",

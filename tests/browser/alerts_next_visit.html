@@ -41,6 +41,10 @@
 		await tick();
 		await tick();
 	}
+	const erpnext_alert = (key, title) => ({
+		kind: "notification", key, title, type: "Alert", unread: 1, urgency: "none",
+		doctype: "Sales Invoice", docname: "ACC-SINV-0042", created: "2026-09-28 07:00:00", message: "",
+	});
 	const alert_of = (key, title, priority) => ({
 		kind: "notification", key, title, unread: 1, urgency: priority === "Urgent" ? "overdue" : "none",
 		doctype: "CyveTech User Alert", docname: key, created: "2026-09-28 07:00:00",
@@ -50,13 +54,18 @@
 	(async function () {
 		start_desk();
 		await answer({
-			alerts: [alert_of("NL-3", "Server maintenance tonight", "Urgent"), alert_of("NL-2", "Stock count on Friday", "Normal"), alert_of("NL-20", "Sent while you were away", "Normal")],
-			total: 3, band: "overdue",
+			alerts: [
+				alert_of("NL-3", "Server maintenance tonight", "Urgent"), alert_of("NL-2", "Stock count on Friday", "Normal"), alert_of("NL-20", "Sent while you were away", "Normal"),
+				erpnext_alert("NL-60", "Cement is below its reorder level"), erpnext_alert("NL-61", "Payment overdue: ACC-SINV-0042"),
+			],
+			total: 5, band: "overdue",
 		});
 		check("with the panel off, none is built", !document.querySelector(".cvt-alerts"), "built");
 		check("an alert sent while away pops up", titles().includes("Sent while you were away"), titles());
 		check("one already popped does not pop up again", !titles().includes("Stock count on Friday"), titles());
 		check("an acknowledged Urgent alert does not come back", window.dialogs.length === 0, window.dialogs.length);
+		check("an ERPNext alert that arrived while away pops up, even with notification pop-ups off", titles().includes("Payment overdue: ACC-SINV-0042"), titles());
+		check("an ERPNext alert that already popped up does not again", !titles().includes("Cement is below its reorder level"), titles());
 
 		document.querySelectorAll(".cvt-popup").forEach((p) => p.remove());
 		(window.realtime.notification || []).forEach((fn) => fn({}));
@@ -64,13 +73,18 @@
 			alerts: [
 				{ kind: "notification", key: "NL-30", title: "Plain news", unread: 1, urgency: "none", doctype: "Task", docname: "T-1", created: "2026-09-28 08:00:00" },
 				alert_of("NL-31", "A new alert", "Normal"),
+				erpnext_alert("NL-32", "Delivery due today: DN-0007"),
 			],
 			total: 2, band: "none",
 		});
 		check("with pop-ups off, plain notifications stay quiet", !titles().includes("Plain news"), titles());
 		check("but a sent alert still pops up", titles().includes("A new alert"), titles());
+		check("and so does a new ERPNext alert", titles().includes("Delivery due today: DN-0007"), titles());
 		report();
-	})();
+	})().catch((error) => {
+		check("the test ran to the end", false, String((error && error.stack) || error));
+		report();
+	});
 </script>
 </body>
 </html>

@@ -7,7 +7,16 @@
 window.results = [];
 
 window.check = function (label, ok, got) {
-	window.results.push({ label, ok: !!ok, got: ok ? "" : JSON.stringify(got) });
+	let shown = "";
+	if (!ok) {
+		try {
+			shown = JSON.stringify(got);
+		} catch (error) {
+			shown = undefined; // a structure JSON cannot hold
+		}
+		shown = shown === undefined ? String(got) : shown;
+	}
+	window.results.push({ label, ok: !!ok, got: shown });
 };
 
 window.css = function (selector, property, pseudo) {

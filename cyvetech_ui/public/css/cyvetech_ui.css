@@ -203,6 +203,38 @@ html.cvt-theme.cvt-top-bar:not([data-theme="dark"]) .desktop-navbar :is(input, .
 	color: var(--text-color);
 }
 
+/* ── The logo ────────────────────────────────────────────────────────────────
+ * Frappe fits both of these into a 32px square, which squashes a wide logo. */
+
+/* The navigation pane's header: the brand's mark (cyvetech_ui_desk.js), whole,
+ * on a white tile, so a dark or colored mark reads on any sidebar color. */
+.sidebar-header .header-logo img.cvt-brand-mark:not(#cvt) {
+	box-sizing: border-box;
+	width: 100%;
+	height: 100%;
+	padding: 3px;
+	border-radius: 8px;
+	background-color: #ffffff !important;
+	object-fit: contain;
+}
+
+/* The desktop's top bar: the logo at its own proportions. */
+html.cvt-brand .desktop-navbar .navbar-home img:not(#cvt) {
+	width: auto;
+	max-width: 200px;
+	height: 32px;
+	object-fit: contain;
+}
+
+/* On a colored top bar, the same white tile under it. */
+html.cvt-brand.cvt-top-bar:not([data-theme="dark"]) .desktop-navbar .navbar-home img:not(#cvt) {
+	box-sizing: border-box;
+	height: 36px;
+	padding: 4px 10px;
+	border-radius: 10px;
+	background-color: #ffffff;
+}
+
 /* ── Stock Addon and HRMS Addon ─────────────────────────────────────────────
  * Both ship a navy theme drawn from their own variables (--agri-*, --hra-*).
  * Pointing those at the colors chosen here makes one settings page drive

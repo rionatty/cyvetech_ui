@@ -1,0 +1,50 @@
+{% extends "frappe/www/login.html" %}
+{#-
+	The sign-in page: Frappe's own page and card, set beside a brand panel.
+	Every section, form, id and class of Frappe's is left exactly as it renders
+	it, because login.js drives the page by them; this file only wraps them.
+	The look comes from login.py (cyvetech_ui/cyvetech_ui/login_rules.py),
+	which validates every color and picture before it reaches this template.
+	With the branded page switched off, Frappe's page renders untouched.
+-#}
+
+{% block head_include %}
+{{ super() }}
+{%- if cvt and cvt.enabled %}
+<link rel="stylesheet" href="/assets/cyvetech_ui/css/cyvetech_ui_login.css?v={{ cvt.version }}">
+<style>
+	:root {
+	{%- for variable, color in cvt.colors.items() %}
+		{{ variable }}: {{ color }};
+	{%- endfor %}
+	}
+</style>
+{%- endif %}
+{% endblock %}
+
+{% block page_content %}
+{%- if cvt and cvt.enabled %}
+<div class="cvt-login{{ ' cvt-login-has-image' if cvt.image else '' }}{{ ' cvt-login-has-logo' if cvt.logo else '' }}">
+	<aside class="cvt-login-brand"
+		{%- if cvt.image %} style="--cvt-login-image: url('{{ cvt.image }}')"{% endif %}>
+		<div class="cvt-login-brand-inner">
+			{%- if cvt.logo %}
+			<div class="cvt-login-logo">
+				<img src="{{ cvt.logo }}" alt="{{ app_name | e }}">
+			</div>
+			{%- endif %}
+			<h1 class="cvt-login-heading">{{ _(cvt.heading) | e }}</h1>
+			<p class="cvt-login-tagline">{{ _(cvt.tagline) | e }}</p>
+		</div>
+		<p class="cvt-login-product">{{ app_name | e }}</p>
+	</aside>
+	<main class="cvt-login-main">
+		<div class="cvt-login-card">
+			{{ super() }}
+		</div>
+	</main>
+</div>
+{%- else %}
+{{ super() }}
+{%- endif %}
+{% endblock %}

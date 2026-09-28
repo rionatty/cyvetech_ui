@@ -1,0 +1,59 @@
+{
+ "actions": [],
+ "creation": "2026-09-28 09:00:00.000000",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "module",
+  "app",
+  "icon_type",
+  "show_on_desk"
+ ],
+ "fields": [
+  {
+   "columns": 4,
+   "fieldname": "module",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Module",
+   "read_only": 1
+  },
+  {
+   "columns": 2,
+   "fieldname": "app",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "App",
+   "read_only": 1
+  },
+  {
+   "columns": 2,
+   "fieldname": "icon_type",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Type",
+   "read_only": 1
+  },
+  {
+   "columns": 2,
+   "default": "1",
+   "fieldname": "show_on_desk",
+   "fieldtype": "Check",
+   "in_list_view": 1,
+   "label": "Show on Desk"
+  }
+ ],
+ "index_web_pages_for_search": 1,
+ "istable": 1,
+ "links": [],
+ "modified": "2026-09-28 09:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "CyveTech UI",
+ "name": "CyveTech Desk Module",
+ "owner": "Administrator",
+ "permissions": [],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": []
+}

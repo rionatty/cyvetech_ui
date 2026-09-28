@@ -1,0 +1,544 @@
+/*
+ * CyveTech UI — the desk.
+ *
+ * Colors come from CyveTech UI Settings through the desk boot:
+ * public/js/cyvetech_ui_desk.js writes them as --cvt-* properties in a
+ * <style id="cvt-theme-vars"> block and switches these classes on <html>:
+ *
+ *   cvt-theme    the sidebar and page colors (light mode only: dark mode
+ *                keeps Frappe's own colors)
+ *   cvt-top-bar  the desktop's top bar in the sidebar color too
+ *   cvt-rounded  rounded corners on tiles and cards
+ *
+ * The values below are the shipped defaults, used until the boot's arrive.
+ *
+ * HOW THE SIDEBAR IS COLORED
+ * Frappe v16 draws the sidebar from a handful of CSS variables
+ * (--surface-menu-bar, --sidebar-*, --ink-gray-*, --icon-stroke). Setting
+ * them on the sidebar recolors every item, icon and hover state inside it,
+ * with no rule per element and nothing to maintain when Frappe adds one.
+ * Panels that open inside the sidebar on a white background (the
+ * notifications list, dropdowns) get Frappe's own light values back.
+ *
+ * WHY SOME RULES CARRY :not(#cvt) AND !important
+ * Stock Addon and HRMS Addon ship a navy theme that forces square corners
+ * and sidebar colors with !important. `:not(#cvt)` matches every element
+ * but adds an id's weight to the selector, so these few rules outrank those
+ * whatever their selectors, without an arms race of ever-longer ones.
+ */
+
+:root {
+	--cvt-sidebar-bg: #16335e;
+	--cvt-sidebar-deep: #132d53;
+	--cvt-sidebar-text: #ffffff;
+	--cvt-sidebar-muted: #b9c2cf;
+	--cvt-sidebar-hover: #2d4770;
+	--cvt-sidebar-border: #34507a;
+	--cvt-highlight: #eaa51a;
+	--cvt-highlight-deep: #b07c14;
+	--cvt-highlight-text: #111827;
+	--cvt-page-bg: #f4f6fa;
+	--cvt-page-text: #111827;
+	--cvt-tile-radius: 16px;
+
+	/* How urgent an alert is, as a color. Each carries white text at 4.5:1 or more. */
+	--cvt-band-overdue: #c53030;
+	--cvt-band-today: #b45309;
+	--cvt-band-soon: #2f64b0;
+	--cvt-band-later: #475569;
+	--cvt-band-none: #64748b;
+}
+
+/* ── Sidebar ─────────────────────────────────────────────────────────────── */
+
+html.cvt-theme:not([data-theme="dark"]) .body-sidebar-container,
+html.cvt-theme:not([data-theme="dark"]) .body-sidebar,
+html.cvt-theme:not([data-theme="dark"]) .desk-sidebar {
+	--surface-menu-bar: var(--cvt-sidebar-bg);
+	--sidebar-hover-color: var(--cvt-sidebar-hover);
+	--sidebar-active-color: var(--cvt-highlight);
+	--sidebar-border-color: var(--cvt-sidebar-border);
+	--heading-color: var(--cvt-sidebar-text);
+	--text-color: var(--cvt-sidebar-text);
+	--text-muted: var(--cvt-sidebar-muted);
+	--text-light: var(--cvt-sidebar-muted);
+	--ink-gray-4: var(--cvt-sidebar-muted);
+	--ink-gray-5: var(--cvt-sidebar-muted);
+	--ink-gray-6: var(--cvt-sidebar-text);
+	--ink-gray-7: var(--cvt-sidebar-text);
+	--ink-gray-8: var(--cvt-sidebar-text);
+	--ink-gray-9: var(--cvt-sidebar-text);
+	--icon-stroke: var(--cvt-sidebar-text);
+	--border-color: var(--cvt-sidebar-border);
+	color: var(--cvt-sidebar-text);
+}
+
+/* The sidebar's own background is the one color this app insists on: another
+ * theme making everything inside the sidebar transparent, or painting it from
+ * its own settings, would otherwise decide what shows. */
+html.cvt-theme:not([data-theme="dark"]) :is(.body-sidebar-container, .body-sidebar, .desk-sidebar):not(#cvt) {
+	background-color: var(--cvt-sidebar-bg) !important;
+}
+
+/* The selected item: the highlight, with text that reads on it. */
+html.cvt-theme:not([data-theme="dark"]) .body-sidebar-container :is(.active-sidebar, .standard-sidebar-item.selected, .sidebar-item-container.selected):not(#cvt),
+html.cvt-theme:not([data-theme="dark"]) .desk-sidebar :is(.standard-sidebar-item.selected, .sidebar-item-container.selected):not(#cvt) {
+	--text-color: var(--cvt-highlight-text);
+	--ink-gray-5: var(--cvt-highlight-text);
+	--ink-gray-6: var(--cvt-highlight-text);
+	--ink-gray-7: var(--cvt-highlight-text);
+	--ink-gray-8: var(--cvt-highlight-text);
+	--icon-stroke: var(--cvt-highlight-text);
+	background-color: var(--cvt-highlight) !important;
+	color: var(--cvt-highlight-text) !important;
+}
+
+html.cvt-theme:not([data-theme="dark"]) .body-sidebar-container :is(.active-sidebar, .standard-sidebar-item.selected, .sidebar-item-container.selected) :is(*, .icon use):not(#cvt),
+html.cvt-theme:not([data-theme="dark"]) .desk-sidebar :is(.standard-sidebar-item.selected, .sidebar-item-container.selected) :is(*, .icon use):not(#cvt) {
+	color: var(--cvt-highlight-text) !important;
+	stroke: var(--cvt-highlight-text) !important;
+}
+
+/* White panels that open inside the sidebar keep Frappe's light ink. */
+html.cvt-theme:not([data-theme="dark"]) :is(.body-sidebar-container, .desk-sidebar) :is(.dropdown-menu, .notifications-list, .popover, .awesomplete > ul) {
+	--heading-color: var(--gray-900);
+	--text-color: var(--gray-800);
+	--text-muted: var(--gray-700);
+	--text-light: var(--gray-600);
+	--ink-gray-4: #999999;
+	--ink-gray-5: #7c7c7c;
+	--ink-gray-6: #525252;
+	--ink-gray-7: #525252;
+	--ink-gray-8: #383838;
+	--ink-gray-9: #171717;
+	--icon-stroke: var(--gray-800);
+	--border-color: var(--gray-200);
+	--sidebar-hover-color: #f3f3f3;
+	color: var(--text-color);
+}
+
+/* ── The central part: the page behind the cards ────────────────────────── */
+
+html.cvt-theme:not([data-theme="dark"]) {
+	--bg-color: var(--cvt-page-bg);
+}
+
+html.cvt-theme:not([data-theme="dark"]) body {
+	background-color: var(--cvt-page-bg);
+}
+
+/* ── The desktop's top bar ──────────────────────────────────────────────── */
+
+html.cvt-theme.cvt-top-bar:not([data-theme="dark"]) .desktop-navbar {
+	--text-color: var(--cvt-sidebar-text);
+	--text-muted: var(--cvt-sidebar-muted);
+	--ink-gray-6: var(--cvt-sidebar-text);
+	--ink-gray-7: var(--cvt-sidebar-text);
+	--icon-stroke: var(--cvt-sidebar-text);
+	background-color: var(--cvt-sidebar-deep);
+	border-bottom-color: var(--cvt-sidebar-border);
+	color: var(--cvt-sidebar-text);
+}
+
+/* the search field and menus in it stay light fields with dark text */
+html.cvt-theme.cvt-top-bar:not([data-theme="dark"]) .desktop-navbar :is(input, .form-control, .dropdown-menu, .awesomplete > ul) {
+	--text-color: var(--gray-800);
+	--text-muted: var(--gray-700);
+	--ink-gray-6: #525252;
+	--ink-gray-7: #525252;
+	--icon-stroke: var(--gray-800);
+	color: var(--text-color);
+}
+
+/* ── Stock Addon and HRMS Addon ─────────────────────────────────────────────
+ * Both ship a navy theme drawn from their own variables (--agri-*, --hra-*).
+ * Pointing those at the colors chosen here makes one settings page drive
+ * all three apps. (If either app's own theme settings are switched on, they
+ * set their variables inline, which wins; switch them off there.) */
+
+html.cvt-theme:not([data-theme="dark"]) {
+	--agri-shell: var(--cvt-sidebar-bg);
+	--agri-shell-dark: var(--cvt-sidebar-deep);
+	--agri-shell-text: var(--cvt-sidebar-text);
+	--agri-shell-muted: var(--cvt-sidebar-muted);
+	--agri-shell-marker: var(--cvt-highlight);
+	--agri-shell-marker-deep: var(--cvt-highlight-deep);
+	--agri-wash: var(--cvt-page-bg);
+	--hra-shell: var(--cvt-sidebar-bg);
+	--hra-shell-dark: var(--cvt-sidebar-deep);
+	--hra-shell-text: var(--cvt-sidebar-text);
+	--hra-shell-muted: var(--cvt-sidebar-muted);
+	--hra-shell-marker: var(--cvt-highlight);
+	--hra-shell-marker-deep: var(--cvt-highlight-deep);
+	--hra-wash: var(--cvt-page-bg);
+}
+
+/* ── Rounded tiles and cards ────────────────────────────────────────────── */
+
+/* Workspace cards: number cards, shortcuts, link lists, charts, quick lists. */
+html.cvt-rounded .widget:not(#cvt) {
+	border-radius: var(--cvt-tile-radius) !important;
+}
+
+/* The desktop's app tiles. Frappe injects the desktop's stylesheet after
+ * this one, hence the weight. Its shipped icons carry their own rounded
+ * background, which a radius here can round further but never square off. */
+html.cvt-rounded .desktop-container :is(.icon-container, .folder-icon):not(#cvt) {
+	border-radius: var(--cvt-tile-radius) !important;
+	overflow: hidden;
+}
+
+html.cvt-rounded .desktop-container .desktop-icon:not(#cvt) {
+	border-radius: calc(var(--cvt-tile-radius) + 4px) !important;
+}
+
+/* ── My Alerts ───────────────────────────────────────────────────────────────
+ * Floats in the bottom-right corner, fixed to the window: Frappe rebuilds the
+ * page between routes, and a panel inside the page would go with it. It sits
+ * over the page and under Frappe's dialogs (1050). Colors come from Frappe's
+ * variables where they exist, so it follows light and dark mode. */
+
+.cvt-alerts {
+	position: fixed;
+	right: 20px;
+	bottom: 20px;
+	z-index: 1030;
+	display: flex;
+	flex-direction: column;
+	width: 320px;
+	max-width: calc(100vw - 32px);
+	overflow: hidden;
+	border: 1px solid var(--border-color, #e2e8f0);
+	border-radius: 14px;
+	background: var(--card-bg, #ffffff);
+	box-shadow: 0 18px 40px -18px rgba(15, 23, 42, 0.35), 0 2px 6px rgba(15, 23, 42, 0.06);
+	color: var(--text-color, #1f2937);
+	font-size: var(--text-sm, 13px);
+}
+
+.cvt-alerts[hidden] {
+	display: none;
+}
+
+/* the header is the button that shrinks the panel and opens it again */
+.cvt-alerts-head {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	width: 100%;
+	padding: 10px 14px;
+	border: 0;
+	background: var(--cvt-sidebar-bg);
+	color: var(--cvt-sidebar-text);
+	cursor: pointer;
+	text-align: left;
+}
+
+.cvt-alerts-head:focus-visible {
+	outline: 2px solid var(--cvt-highlight);
+	outline-offset: -2px;
+}
+
+.cvt-alerts-title {
+	flex: 1 1 auto;
+	font-weight: 600;
+	letter-spacing: 0.01em;
+}
+
+.cvt-alerts-count {
+	min-width: 22px;
+	padding: 1px 7px;
+	border-radius: 999px;
+	background: var(--cvt-band, var(--cvt-band-none));
+	color: #ffffff;
+	font-size: 11px;
+	font-weight: 700;
+	text-align: center;
+}
+
+/* the chevron turns over when the panel is shrunk */
+.cvt-alerts-chevron {
+	width: 0;
+	height: 0;
+	border-right: 5px solid transparent;
+	border-left: 5px solid transparent;
+	border-top: 6px solid currentColor;
+	transition: transform 0.15s ease;
+}
+
+.cvt-alerts-collapsed .cvt-alerts-chevron {
+	transform: rotate(180deg);
+}
+
+.cvt-alerts-collapsed :is(.cvt-alerts-body, .cvt-alerts-foot) {
+	display: none;
+}
+
+.cvt-alerts-body {
+	max-height: 340px;
+	overflow-y: auto;
+	padding: 4px 0;
+}
+
+.cvt-alerts-empty {
+	padding: 14px;
+	color: var(--text-muted, #64748b);
+}
+
+.cvt-alert {
+	display: flex;
+	gap: 9px;
+	padding: 9px 14px 9px 11px;
+	border-left: 3px solid transparent;
+	color: inherit;
+	text-decoration: none;
+}
+
+.cvt-alert:hover,
+.cvt-alert:focus-visible {
+	background: var(--fg-hover-color, #f1f5f9);
+	color: inherit;
+	text-decoration: none;
+}
+
+.cvt-alert-dot {
+	flex: 0 0 auto;
+	width: 7px;
+	height: 7px;
+	margin-top: 6px;
+	border-radius: 50%;
+	background: var(--cvt-band, var(--cvt-band-none));
+	opacity: 0.4;
+}
+
+.cvt-alert-unread .cvt-alert-dot {
+	opacity: 1;
+}
+
+.cvt-alert-text {
+	min-width: 0;
+}
+
+.cvt-alert-title {
+	display: block;
+	line-height: 1.4;
+}
+
+.cvt-alert-unread .cvt-alert-title {
+	font-weight: 600;
+}
+
+.cvt-alert-meta {
+	display: block;
+	margin-top: 2px;
+	color: var(--text-muted, #64748b);
+	font-size: 11px;
+}
+
+.cvt-alerts-foot {
+	padding: 7px 14px 9px;
+	border-top: 1px solid var(--border-color, #e2e8f0);
+	text-align: right;
+}
+
+.cvt-alerts-read-all {
+	padding: 0;
+	border: 0;
+	background: none;
+	color: var(--text-muted, #64748b);
+	cursor: pointer;
+	font-size: 11px;
+}
+
+.cvt-alerts-read-all:hover {
+	color: var(--text-color, #1f2937);
+	text-decoration: underline;
+}
+
+/* every row, badge and pop-up takes its color from its band */
+.cvt-band-overdue {
+	--cvt-band: var(--cvt-band-overdue);
+}
+.cvt-band-today {
+	--cvt-band: var(--cvt-band-today);
+}
+.cvt-band-soon {
+	--cvt-band: var(--cvt-band-soon);
+}
+.cvt-band-later {
+	--cvt-band: var(--cvt-band-later);
+}
+.cvt-band-none {
+	--cvt-band: var(--cvt-band-none);
+}
+
+.cvt-alert.cvt-band-overdue,
+.cvt-alert.cvt-band-today {
+	border-left-color: var(--cvt-band);
+}
+
+/* ── Pop-ups for what just arrived ──────────────────────────────────────── */
+
+.cvt-popups {
+	position: fixed;
+	top: 16px;
+	right: 16px;
+	z-index: 1040;
+	display: flex;
+	flex-direction: column;
+	gap: 10px;
+	width: 360px;
+	max-width: calc(100vw - 32px);
+	pointer-events: none;
+}
+
+.cvt-popup {
+	position: relative;
+	display: flex;
+	gap: 12px;
+	overflow: hidden;
+	padding: 14px 14px 14px 16px;
+	border: 1px solid var(--border-color, #e2e8f0);
+	border-left: 4px solid var(--cvt-band, var(--cvt-band-none));
+	border-radius: 14px;
+	background: var(--card-bg, #ffffff);
+	box-shadow: 0 18px 40px -18px rgba(15, 23, 42, 0.4), 0 2px 6px rgba(15, 23, 42, 0.08);
+	color: var(--text-color, #1f2937);
+	pointer-events: auto;
+}
+
+.cvt-popup-text {
+	flex: 1 1 auto;
+	min-width: 0;
+}
+
+.cvt-popup-kicker {
+	display: block;
+	margin-bottom: 2px;
+	color: var(--cvt-band, var(--cvt-band-none));
+	font-size: 11px;
+	font-weight: 700;
+	letter-spacing: 0.06em;
+	text-transform: uppercase;
+}
+
+.cvt-popup-title {
+	display: block;
+	font-weight: 600;
+	line-height: 1.4;
+}
+
+.cvt-popup-body {
+	display: -webkit-box;
+	margin-top: 3px;
+	overflow: hidden;
+	-webkit-box-orient: vertical;
+	-webkit-line-clamp: 3;
+	color: var(--text-muted, #64748b);
+	font-size: 12px;
+	line-height: 1.45;
+}
+
+.cvt-popup-actions {
+	display: flex;
+	gap: 14px;
+	margin-top: 8px;
+}
+
+.cvt-popup-actions button {
+	padding: 0;
+	border: 0;
+	background: none;
+	cursor: pointer;
+	font-size: 12px;
+	font-weight: 600;
+}
+
+.cvt-popup-open {
+	color: var(--cvt-band, var(--cvt-band-none));
+}
+
+.cvt-popup-dismiss {
+	color: var(--text-muted, #64748b);
+}
+
+.cvt-popup-close {
+	flex: 0 0 auto;
+	align-self: flex-start;
+	width: 22px;
+	height: 22px;
+	padding: 0;
+	border: 0;
+	border-radius: 6px;
+	background: none;
+	color: var(--text-muted, #64748b);
+	cursor: pointer;
+	font-size: 16px;
+	line-height: 1;
+}
+
+.cvt-popup-close:hover {
+	background: var(--fg-hover-color, #f1f5f9);
+}
+
+/* a thin line that runs down while a pop-up waits to close itself */
+.cvt-popup-timer {
+	position: absolute;
+	right: 0;
+	bottom: 0;
+	left: 0;
+	height: 2px;
+	background: var(--cvt-band, var(--cvt-band-none));
+	opacity: 0.5;
+	transform-origin: left;
+	animation: cvt-popup-timer linear forwards;
+}
+
+.cvt-popup:hover .cvt-popup-timer {
+	animation-play-state: paused;
+}
+
+@keyframes cvt-popup-timer {
+	from {
+		transform: scaleX(1);
+	}
+	to {
+		transform: scaleX(0);
+	}
+}
+
+@media (prefers-reduced-motion: no-preference) {
+	.cvt-popup {
+		animation: cvt-popup-in 0.25s ease-out both;
+	}
+}
+
+@keyframes cvt-popup-in {
+	from {
+		opacity: 0;
+		transform: translateX(16px);
+	}
+	to {
+		opacity: 1;
+		transform: none;
+	}
+}
+
+@media (max-width: 767px) {
+	.cvt-alerts {
+		right: 12px;
+		bottom: 12px;
+	}
+
+	.cvt-popups {
+		top: 12px;
+		right: 12px;
+	}
+}
+
+@media print {
+	.cvt-alerts,
+	.cvt-popups {
+		display: none !important;
+	}
+}

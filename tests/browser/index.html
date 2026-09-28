@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>CyveTech UI browser tests</title>
+<!--
+	Runs the desk, chart and alert test pages and sums them up. Serve the
+	repository and open this page:
+
+		python -m http.server 8765 --directory .
+		http://localhost:8765/tests/browser/
+-->
+<style>
+	body { font: 14px system-ui, sans-serif; margin: 24px; color: #111827; }
+	h1 { font-size: 18px; margin: 0 0 16px; }
+	td { padding: 4px 16px 4px 0; }
+	.pass { color: #166534; } .fail { color: #b91c1c; }
+	iframe { display: none; }
+</style>
+</head>
+<body>
+<h1>CyveTech UI browser tests</h1>
+<table><tbody id="rows"></tbody></table>
+<script>
+	const SUITES = ["desk.html", "charts.html", "alerts.html"];
+
+	function run(page) {
+		return new Promise((resolve) => {
+			const frame = document.createElement("iframe");
+			frame.src = page;
+			document.body.appendChild(frame);
+			const started = Date.now();
+			const wait = () => {
+				const summary = frame.contentWindow && frame.contentWindow.test_summary;
+				if (summary) return resolve(summary);
+				if (Date.now() - started > 15000) return resolve({ total: 0, failed: 1, failures: [{ label: "did not finish" }] });
+				setTimeout(wait, 50);
+			};
+			wait();
+		});
+	}
+
+	(async function () {
+		let failed = 0;
+		let total = 0;
+		for (const page of SUITES) {
+			const summary = await run(page);
+			failed += summary.failed;
+			total += summary.total;
+			const row = document.createElement("tr");
+			row.innerHTML = `<td><a href="${page}">${page}</a></td>
+				<td class="${summary.failed ? "fail" : "pass"}">${summary.total - summary.failed}/${summary.total} passed</td>
+				<td>${summary.failures.map((f) => f.label).join("; ")}</td>`;
+			document.getElementById("rows").appendChild(row);
+		}
+		document.title = `${failed ? "FAIL" : "PASS"} ${total - failed}/${total}`;
+		window.all_summary = { total, failed };
+	})();
+</script>
+</body>
+</html>

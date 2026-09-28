@@ -1,0 +1,228 @@
+<!doctype html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="utf-8">
+<title>alert tests</title>
+<script src="harness.js"></script>
+<script>load_app_file("/cyvetech_ui/public/css/cyvetech_ui.css")</script>
+<script>
+	const METHOD = "cyvetech_ui.cyvetech_ui.alerts.my_alerts";
+	const MARK_READ = "frappe.desk.doctype.notification_log.notification_log.mark_as_read";
+	const MARK_ALL_READ = "frappe.desk.doctype.notification_log.notification_log.mark_all_as_read";
+
+	localStorage.clear();
+	window.calls = [];
+	window.pending = []; // unanswered my_alerts calls: [resolve]
+	window.answer_next = null;
+	window.routes = [];
+	window.sounds = 0;
+	window.dialogs = [];
+	window.jq = {};
+	window.realtime = {};
+
+	// just enough jQuery for $(document).on("app_ready", ...)
+	window.$ = (target) => ({ on: (event, fn) => ((window.jq[event] = window.jq[event] || []).push(fn)) });
+
+	window.install_frappe = function (alerts_conf) {
+		window.frappe = make_frappe({ cyvetech_ui: { alerts: alerts_conf } });
+		frappe.xcall = (method, args) => {
+			window.calls.push({ method, args });
+			if (method !== METHOD) return Promise.resolve();
+			return new Promise((resolve) => window.pending.push(() => resolve(window.answer_next)));
+		};
+		frappe.realtime = { on: (event, fn) => ((window.realtime[event] = window.realtime[event] || []).push(fn)) };
+		frappe.router = { on() {} };
+		frappe.set_route = (...route) => window.routes.push(route);
+		frappe.utils.play_sound = () => window.sounds++;
+		frappe.datetime = { prettyDate: () => "2 hours ago" };
+		frappe.user = { full_name: (user) => (user === "admin@example.com" ? "Admin User" : user) };
+		frappe.ui = {
+			Dialog: class {
+				constructor(opts) {
+					this.opts = opts;
+					this.html = "";
+					this.fields_dict = { message: { $wrapper: { html: (html) => (this.html = html) } } };
+					window.dialogs.push(this);
+				}
+				show() { this.shown = true; }
+				hide() { this.shown = false; this.onhide && this.onhide(); }
+			},
+		};
+	};
+	install_frappe({ panel: 1, popup: 1, seconds: 3, sound: 1 });
+</script>
+<script>load_app_file("/cyvetech_ui/public/js/cyvetech_ui_alerts.js")</script>
+</head>
+<body>
+<div id="results"></div>
+<script>
+	const tick = () => new Promise((r) => setTimeout(r, 0));
+	async function answer(data) {
+		window.answer_next = data;
+		const resolve = window.pending.shift();
+		resolve();
+		await tick();
+		await tick();
+	}
+	const loads = () => window.calls.filter((c) => c.method === METHOD).length;
+	const popups = () => [...document.querySelectorAll(".cvt-popup")];
+	const titles = () => popups().map((p) => (p.querySelector(".cvt-popup-title") || {}).textContent);
+	const popped = () => JSON.parse(localStorage.getItem("cyvetech_ui:popped:jane@example.com") || "[]");
+	const fire = (event) => (window.realtime[event] || []).forEach((fn) => fn({}));
+	const app_ready = () => (window.jq.app_ready || []).forEach((fn) => fn());
+
+	const T1 = {
+		kind: "assignment", key: "TODO-1", urgency: "overdue", when: "overdue by 8 days",
+		title: "Interview shortlist for Chief Technology Officer: Pending HOD Screening",
+		doctype: "Interview Shortlist", docname: "HR-SHL-2026-0001", created: "2026-09-01 10:00:00",
+	};
+	const N1 = {
+		kind: "notification", key: "NL-1", urgency: "none", unread: 1, created: "2026-09-27 08:00:00",
+		title: "<img src=x onerror=window.__xss=1> mentioned you", doctype: "Task", docname: "TASK-1",
+	};
+	const A_NORMAL = {
+		kind: "notification", key: "NL-2", urgency: "none", unread: 1, created: "2026-09-28 07:00:00",
+		title: "Stock count on Friday", doctype: "CyveTech User Alert", docname: "ALERT-1", from_user: "admin@example.com",
+		alert: { name: "ALERT-1", priority: "Normal", message: "<p>Count the <b>main store</b> before noon.</p>" },
+	};
+	const A_URGENT = {
+		kind: "notification", key: "NL-3", urgency: "overdue", unread: 1, created: "2026-09-28 07:30:00",
+		title: "Server maintenance tonight", doctype: "Sales Order", docname: "SO-1", from_user: "admin@example.com",
+		alert: {
+			name: "ALERT-2", priority: "Urgent",
+			message: '<p>Save your work by <b>6pm</b>.</p><img src=x onerror="window.__xss2=1"><script>window.__xss3=1<\/script><a href="javascript:window.__xss4=1">x</a>',
+		},
+	};
+	const N_READ = { kind: "notification", key: "NL-4", urgency: "none", unread: 0, created: "2026-09-20", title: "Old news", doctype: "Task", docname: "TASK-9" };
+
+	(async function () {
+		// ── first visit ────────────────────────────────────────────────
+		check("nothing is built before the desk is up", !document.querySelector(".cvt-alerts"), "built early");
+		app_ready();
+		check("the panel is built once the desk is up", !!document.querySelector(".cvt-alerts"), "no panel");
+		check("it listens for new notifications", (window.realtime.notification || []).length === 1, window.realtime);
+		await answer({ alerts: [A_URGENT, T1, N1, A_NORMAL, N_READ], total: 4, band: "overdue" });
+
+		const badge = document.querySelector(".cvt-alerts-count");
+		check("the badge counts what is outstanding", badge.textContent === "4", badge.textContent);
+		check("the badge takes the most urgent band", badge.classList.contains("cvt-band-overdue"), badge.className);
+		const rows = [...document.querySelectorAll(".cvt-alert")];
+		check("every alert is a row", rows.length === 5, rows.length);
+		const t1 = rows.find((r) => r.dataset.key === "TODO-1");
+		check("an assignment reads like the screenshot",
+			t1.querySelector(".cvt-alert-meta").textContent === "Interview Shortlist · HR-SHL-2026-0001 · overdue by 8 days",
+			t1.querySelector(".cvt-alert-meta").textContent);
+		check("an overdue row takes the overdue band", t1.classList.contains("cvt-band-overdue"), t1.className);
+		const alert_row = rows.find((r) => r.dataset.key === "NL-2");
+		check("a sent alert says who sent it", alert_row.querySelector(".cvt-alert-meta").textContent === "Alert · from Admin User · 2 hours ago",
+			alert_row.querySelector(".cvt-alert-meta").textContent);
+		check("a read notification is not bold", !rows.find((r) => r.dataset.key === "NL-4").classList.contains("cvt-alert-unread"), "");
+		check("rows link to their document", t1.getAttribute("href") === "/app/interview-shortlist/HR-SHL-2026-0001", t1.getAttribute("href"));
+		check("markup in a title is shown as text, never run", !document.querySelector(".cvt-alerts img") && !window.__xss,
+			document.querySelector('[data-key="NL-1"] .cvt-alert-title').innerHTML);
+		check("Mark notifications read shows while something is unread", !document.querySelector(".cvt-alerts-foot").hidden, "hidden");
+
+		check("first visit: an unread alert that never popped up pops up", titles().includes("Stock count on Friday"), titles());
+		check("first visit: old notifications and assignments do not pop up", titles().length === 1, titles());
+		check("the alert's pop-up shows its message as text", popups()[0].querySelector(".cvt-popup-body").textContent === "Count the main store before noon.",
+			popups()[0].querySelector(".cvt-popup-body").textContent);
+		check("a Normal alert's pop-up closes by itself", !!popups()[0].querySelector(".cvt-popup-timer"), "no timer");
+		check("a sound plays for what arrived", window.sounds === 1, window.sounds);
+
+		const urgent = window.dialogs[0];
+		check("an Urgent alert opens a message to acknowledge", urgent && urgent.shown && urgent.opts.title === "Server maintenance tonight", urgent && urgent.opts);
+		check("the Urgent message keeps its formatting", urgent.html.includes("<b>6pm</b>"), urgent.html);
+		check("nothing active survives in the Urgent message",
+			!/onerror|<script|javascript:/i.test(urgent.html) && !window.__xss2 && !window.__xss3, urgent.html);
+		check("it offers to open the document it is about", urgent.opts.secondary_action_label === "Open", urgent.opts.secondary_action_label);
+		check("popped alerts are remembered; the Urgent one not until acknowledged",
+			popped().includes("NL-2") && !popped().includes("NL-3"), popped());
+
+		urgent.opts.primary_action();
+		await tick();
+		check("Got it marks the alert read", window.calls.some((c) => c.method === MARK_READ && c.args.docname === "NL-3"), window.calls);
+		check("and remembers it", popped().includes("NL-3"), popped());
+		check("and closes the message", !urgent.shown, "still shown");
+		await answer({ alerts: [A_URGENT, T1, N1, A_NORMAL, N_READ], total: 3, band: "overdue" }); // the reload after marking read
+
+		// ── what arrives while the page is open ────────────────────────
+		const before = loads();
+		fire("notification");
+		fire("notification");
+		fire("notification");
+		check("one load at a time", loads() === before + 1, loads() - before);
+		const T2 = { kind: "assignment", key: "TODO-2", urgency: "soon", when: "due in 3 days", title: "Review the Q3 budget", doctype: "Budget", docname: "BUD-1", created: "2026-09-28 09:00:00" };
+		const A_IMPORTANT = { ...A_NORMAL, key: "NL-10", urgency: "today", title: "Board meeting moved", alert: { name: "ALERT-3", priority: "Important", message: "Now at 2pm." } };
+		const fresh = [5, 6, 7, 8].map((i) => ({ kind: "notification", key: `NL-${i}`, urgency: "none", unread: 1, created: `2026-09-28 10:0${i}:00`, title: `Update ${i}`, doctype: "Task", docname: `TASK-${i}` }));
+		document.querySelectorAll(".cvt-popup").forEach((p) => p.remove());
+		await answer({ alerts: [A_URGENT, T1, T2, A_IMPORTANT, N1, ...fresh, A_NORMAL, N_READ], total: 9, band: "overdue" });
+		check("events that arrived mid-load ask once more, not once each", loads() === before + 2, loads() - before);
+		await answer({ alerts: [A_URGENT, T1, T2, A_IMPORTANT, N1, ...fresh, A_NORMAL, N_READ], total: 9, band: "overdue" });
+		check("no more loads after that", loads() === before + 2 && window.pending.length === 0, [loads() - before, window.pending.length]);
+
+		check("what is new pops up, most urgent first, three at a time",
+			JSON.stringify(titles().slice(0, 3)) === JSON.stringify(["Review the Q3 budget", "Board meeting moved", "Update 5"]), titles());
+		check("the rest are summed up in one card", titles()[3] === "3 more waiting in My Alerts", titles());
+		const important = popups()[1];
+		check("an Important alert stays until closed", !important.querySelector(".cvt-popup-timer") && important.getAttribute("role") === "alert", important.outerHTML.slice(0, 200));
+		check("a new assignment is labeled as one", popups()[0].querySelector(".cvt-popup-kicker").textContent === "New assignment", popups()[0].querySelector(".cvt-popup-kicker").textContent);
+
+		popups()[2].querySelector(".cvt-popup-timer").dispatchEvent(new Event("animationend"));
+		check("a pop-up closes itself when its timer runs out", !titles().includes("Update 5"), titles());
+
+		const route_count = window.routes.length;
+		popups()[0].querySelector(".cvt-popup-open").click();
+		check("Open goes to the document", JSON.stringify(window.routes[route_count]) === JSON.stringify(["Form", "Budget", "BUD-1"]), window.routes);
+		check("and closes the pop-up", !titles().includes("Review the Q3 budget"), titles());
+
+		document.querySelector('.cvt-alert[data-key="NL-5"]').click();
+		await tick();
+		check("clicking an unread notification marks it read", window.calls.some((c) => c.method === MARK_READ && c.args.docname === "NL-5"), window.calls);
+		check("and opens its document", JSON.stringify(window.routes[window.routes.length - 1]) === JSON.stringify(["Form", "Task", "TASK-5"]), window.routes);
+		await answer({ alerts: [A_URGENT, T1, T2, A_IMPORTANT, N1, ...fresh, A_NORMAL, N_READ], total: 8, band: "overdue" });
+
+		document.querySelector(".cvt-alerts-read-all").click();
+		await tick();
+		check("Mark notifications read marks them all read", window.calls.some((c) => c.method === MARK_ALL_READ), window.calls);
+		await answer({ alerts: [T1, T2], total: 2, band: "overdue" });
+		check("with nothing unread the button goes away", document.querySelector(".cvt-alerts-foot").hidden, "still shown");
+
+		// it starts shrunk on a narrow window and open on a wide one
+		const panel_el = () => document.querySelector(".cvt-alerts");
+		check("it starts shrunk only on a phone-width window",
+			panel_el().classList.contains("cvt-alerts-collapsed") === (window.innerWidth < 768), [window.innerWidth, panel_el().className]);
+		const was_shrunk = panel_el().classList.contains("cvt-alerts-collapsed");
+		if (was_shrunk) document.querySelector(".cvt-alerts-head").click(); // open it first
+		check("the header opens it", !panel_el().classList.contains("cvt-alerts-collapsed"), "still shrunk");
+		check("and the list shows", getComputedStyle(document.querySelector(".cvt-alerts-body")).display !== "none", "hidden");
+		document.querySelector(".cvt-alerts-head").click();
+		check("the header shrinks it again", panel_el().classList.contains("cvt-alerts-collapsed"), "not shrunk");
+		check("and the list is out of sight", getComputedStyle(document.querySelector(".cvt-alerts-body")).display === "none", "visible");
+		check("the choice is remembered", localStorage.getItem("cyvetech_ui:alerts_collapsed") === "1", localStorage.getItem("cyvetech_ui:alerts_collapsed"));
+		check("the header says whether it is open", document.querySelector(".cvt-alerts-head").getAttribute("aria-expanded") === "false", document.querySelector(".cvt-alerts-head").getAttribute("aria-expanded"));
+
+		panel_el().remove();
+		await tick();
+		check("taken out of the page, the panel comes straight back", !!panel_el(), "gone");
+		check("and comes back as it was left", panel_el().classList.contains("cvt-alerts-collapsed"), "open");
+		check("with its rows", document.querySelectorAll(".cvt-alert").length === 2, document.querySelectorAll(".cvt-alert").length);
+
+		// ── the next visit, in a page of its own (the same browser storage) ──
+		const frame = document.createElement("iframe");
+		frame.src = "alerts_next_visit.html" + location.search; // the same files
+		frame.style.cssText = "width:100%;height:300px;border:1px solid #ddd";
+		document.body.appendChild(frame);
+		await new Promise((resolve) => {
+			const wait = () => (frame.contentWindow && frame.contentWindow.test_summary ? resolve() : setTimeout(wait, 50));
+			wait();
+		});
+		frame.contentWindow.results.forEach((r) => window.results.push({ ...r, label: "next visit: " + r.label }));
+
+		report();
+	})().catch((error) => {
+		check("the test ran to the end", false, String(error && error.stack || error));
+		report();
+	});
+</script>
+</body>
+</html>

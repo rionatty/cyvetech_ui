@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="utf-8">
+<title>chart tests</title>
+<script src="harness.js"></script>
+<script>
+	const PALETTE = ["#2f64b0", "#eb6834", "#1baf7a", "#eaa51a", "#e87ba4", "#008300", "#4a3aa7", "#e34948"];
+	const DARK = ["#3987e5", "#d95926", "#199e70", "#c98500", "#d55181", "#008300", "#9085e9", "#e66767"];
+
+	// frappe-charts' Chart hands back a chart of the right type rather than
+	// itself; this stand-in does the same, and records what it was given.
+	window.built = [];
+	class Chart {
+		constructor(parent, options) {
+			const chart = { parent, options, kind: "AxisChart" };
+			window.built.push(chart);
+			return chart;
+		}
+	}
+	Chart.from_frappe_charts = true;
+
+	window.frappe = make_frappe({
+		cyvetech_ui: { charts: { enabled: 1, palette: PALETTE, dark_palette: DARK, vary: 1, override: 0 } },
+	});
+	frappe.Chart = Chart;
+</script>
+<script>load_app_file("/cyvetech_ui/public/js/cyvetech_ui_charts.js")</script>
+<!-- loaded twice on purpose: the wrapper must not wrap itself -->
+<script>load_app_file("/cyvetech_ui/public/js/cyvetech_ui_charts.js")</script>
+</head>
+<body>
+<div class="widget"><div class="widget-title">Sales Order Trends</div><div class="widget-body" id="sales"></div></div>
+<div class="widget"><div class="widget-title">Purchase Order Trends</div><div class="widget-body" id="purchase"></div></div>
+<div id="results"></div>
+<script>
+	const one = { labels: ["Jan", "Feb"], datasets: [{ name: "Amount", values: [1, 2] }] };
+	const two = { labels: ["Jan", "Feb"], datasets: [{ name: "Ordered", values: [1, 2] }, { name: "Billed", values: [2, 1] }] };
+	const colors = (chart) => chart.options.colors;
+	const last = () => window.built[window.built.length - 1];
+	const make = (parent, options) => new frappe.Chart(parent, options);
+	const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
+
+	check("frappe.Chart is wrapped once", frappe.Chart.cyvetech_ui === true && Object.getPrototypeOf(frappe.Chart) === Chart, "");
+	check("static members are still reachable", frappe.Chart.from_frappe_charts === true, "");
+
+	let chart = make("#sales", { type: "bar", data: two, colors: [[]] });
+	check("a chart returns what frappe-charts built", chart === last() && chart.kind === "AxisChart", chart);
+	check("a Line/Bar widget with no color takes the palette in order", same(colors(chart), PALETTE), colors(chart));
+
+	chart = make("#sales", { type: "pie", data: one, colors: ["light-blue"] });
+	check("make_chart's lone light-blue placeholder counts as no choice", same(colors(chart), PALETTE), colors(chart));
+
+	chart = make("#sales", { type: "bar", data: two, colors: ["#ff0000"] });
+	check("colors a chart chose on purpose are kept", colors(chart)[0] === "#ff0000", colors(chart));
+	check("and the palette follows them, not Frappe's defaults", same(colors(chart).slice(1), PALETTE), colors(chart));
+
+	chart = make("#sales", { type: "bar", data: two, colors: [undefined, "red"] });
+	check("a series left without a color gets the palette color in its place", same(colors(chart).slice(0, 2), [PALETTE[0], "red"]), colors(chart));
+
+	chart = make("#sales", { type: "line", data: one, colors: ["", "not-a-color"] });
+	check("blank and invalid picks count as no choice", colors(chart).every((c) => PALETTE.includes(c)), colors(chart));
+
+	const heat = { type: "heatmap", data: { dataPoints: {} }, colors: ["#ebedf0"] };
+	chart = make("#sales", heat);
+	check("heatmaps are left alone", chart.options === heat, chart.options);
+
+	const original = { type: "bar", data: two, colors: [[]] };
+	make("#sales", original);
+	check("the caller's options are not changed", same(original.colors, [[]]), original.colors);
+
+	// single-series charts: a color from the title, stable, different side by side
+	const sales_a = colors(make(document.getElementById("sales"), { type: "bar", data: one, colors: [[]] }));
+	const sales_b = colors(make(document.getElementById("sales"), { type: "bar", data: one, colors: [[]] }));
+	const purchase = colors(make(document.getElementById("purchase"), { type: "bar", data: one, colors: [[]] }));
+	check("a single-series chart keeps its color every time", same(sales_a, sales_b), [sales_a, sales_b]);
+	check("two different charts side by side get different colors", sales_a[0] !== purchase[0], [sales_a[0], purchase[0]]);
+	check("the rotated palette still holds every color once", same([...sales_a].sort(), [...PALETTE].sort()), sales_a);
+
+	chart = make(document.getElementById("sales"), { type: "pie", data: one, colors: [] });
+	check("pie slices always take the palette in order", same(colors(chart), PALETTE), colors(chart));
+
+	chart = make("#purchase", { type: "bar", data: one, colors: [[]], title: "x" });
+	check("a selector string finds its card title too", colors(chart)[0] === purchase[0], [colors(chart)[0], purchase[0]]);
+
+	document.documentElement.setAttribute("data-theme", "dark");
+	chart = make("#nowhere", { type: "bar", data: two, colors: [[]] });
+	check("dark mode takes the dark steps of the palette", same(colors(chart), DARK), colors(chart));
+	document.documentElement.setAttribute("data-theme", "light");
+
+	frappe.boot.cyvetech_ui.charts.override = 1;
+	chart = make("#nowhere", { type: "bar", data: two, colors: ["#ff0000", "#00ff00"] });
+	check("with override on, even chosen colors give way", same(colors(chart), PALETTE), colors(chart));
+	frappe.boot.cyvetech_ui.charts.override = 0;
+
+	chart = make("#nowhere", null);
+	check("a chart with no options is passed through untouched", chart.options === null, chart.options);
+
+	report();
+</script>
+</body>
+</html>

@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="utf-8">
+<title>alert tests: the next visit</title>
+<!--
+	Opened by alerts.html after its own visit, in the same browser storage:
+	what pops up on the next visit, with the panel and plain pop-ups switched off.
+-->
+<script src="harness.js"></script>
+<script>load_app_file("/cyvetech_ui/public/css/cyvetech_ui.css")</script>
+<script>
+	const METHOD = "cyvetech_ui.cyvetech_ui.alerts.my_alerts";
+	window.pending = [];
+	window.dialogs = [];
+	window.jq = {};
+	window.realtime = {};
+	window.$ = () => ({ on: (event, fn) => ((window.jq[event] = window.jq[event] || []).push(fn)) });
+	window.frappe = make_frappe({ cyvetech_ui: { alerts: { panel: 0, popup: 0, seconds: 3, sound: 0 } } });
+	frappe.xcall = (method) =>
+		method === METHOD ? new Promise((resolve) => window.pending.push(resolve)) : Promise.resolve();
+	frappe.realtime = { on: (event, fn) => ((window.realtime[event] = window.realtime[event] || []).push(fn)) };
+	frappe.router = { on() {} };
+	frappe.set_route = () => {};
+	frappe.datetime = { prettyDate: () => "just now" };
+	frappe.user = { full_name: (user) => user };
+	frappe.ui = {
+		Dialog: class {
+			constructor(opts) { this.opts = opts; this.fields_dict = { message: { $wrapper: { html() {} } } }; window.dialogs.push(this); }
+			show() {}
+			hide() {}
+		},
+	};
+</script>
+<script>load_app_file("/cyvetech_ui/public/js/cyvetech_ui_alerts.js")</script>
+</head>
+<body>
+<script>
+	const tick = () => new Promise((r) => setTimeout(r, 0));
+	const titles = () => [...document.querySelectorAll(".cvt-popup-title")].map((t) => t.textContent);
+	async function answer(data) {
+		window.pending.shift()(data);
+		await tick();
+		await tick();
+	}
+	const alert_of = (key, title, priority) => ({
+		kind: "notification", key, title, unread: 1, urgency: priority === "Urgent" ? "overdue" : "none",
+		doctype: "CyveTech User Alert", docname: key, created: "2026-09-28 07:00:00",
+		alert: { name: key, priority, message: "..." },
+	});
+
+	(async function () {
+		(window.jq.app_ready || []).forEach((fn) => fn());
+		await answer({
+			alerts: [alert_of("NL-3", "Server maintenance tonight", "Urgent"), alert_of("NL-2", "Stock count on Friday", "Normal"), alert_of("NL-20", "Sent while you were away", "Normal")],
+			total: 3, band: "overdue",
+		});
+		check("with the panel off, none is built", !document.querySelector(".cvt-alerts"), "built");
+		check("an alert sent while away pops up", titles().includes("Sent while you were away"), titles());
+		check("one already popped does not pop up again", !titles().includes("Stock count on Friday"), titles());
+		check("an acknowledged Urgent alert does not come back", window.dialogs.length === 0, window.dialogs.length);
+
+		document.querySelectorAll(".cvt-popup").forEach((p) => p.remove());
+		(window.realtime.notification || []).forEach((fn) => fn({}));
+		await answer({
+			alerts: [
+				{ kind: "notification", key: "NL-30", title: "Plain news", unread: 1, urgency: "none", doctype: "Task", docname: "T-1", created: "2026-09-28 08:00:00" },
+				alert_of("NL-31", "A new alert", "Normal"),
+			],
+			total: 2, band: "none",
+		});
+		check("with pop-ups off, plain notifications stay quiet", !titles().includes("Plain news"), titles());
+		check("but a sent alert still pops up", titles().includes("A new alert"), titles());
+		report();
+	})();
+</script>
+</body>
+</html>

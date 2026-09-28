@@ -1,0 +1,5 @@
+# Frappe apps run on Linux: keep LF endings in every checkout
+* text=auto eol=lf
+*.png binary
+*.jpg binary
+*.ico binary

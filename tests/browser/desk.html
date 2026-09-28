@@ -1,0 +1,178 @@
+<!doctype html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="utf-8">
+<title>desk tests</title>
+<link rel="icon" href="/assets/frappe/images/frappe-favicon.svg">
+<!--
+	The parts of Frappe v16's desk stylesheet that the theme works through,
+	copied with their variables (frappe/public/scss/desk/sidebar.scss,
+	desk/desktop.scss, espresso/_colors.scss, common/css_variables.scss).
+-->
+<style>
+	:root {
+		--gray-200: #ededed; --gray-600: #7c7c7c; --gray-700: #525252; --gray-800: #383838; --gray-900: #171717;
+		--surface-menu-bar: #f8f8f8; --sidebar-hover-color: #f3f3f3; --sidebar-active-color: #ffffff;
+		--sidebar-border-color: #ededed; --ink-gray-4: #999999; --ink-gray-5: #7c7c7c; --ink-gray-6: #525252;
+		--ink-gray-7: #525252; --ink-gray-8: #383838; --ink-gray-9: #171717; --text-color: var(--gray-800);
+		--text-muted: var(--gray-700); --bg-color: white; --card-bg: white; --border-color: var(--gray-200);
+		--border-radius-lg: 12px; --icon-stroke: var(--gray-800);
+	}
+	html, body { background-color: var(--bg-color); margin: 0; font: 13px system-ui; }
+	.layout { display: flex; min-height: 420px; }
+	.body-sidebar { width: 220px; background: var(--surface-menu-bar); border-right: 1px solid var(--sidebar-border-color); padding: 8px; }
+	.sidebar-header { display: flex; gap: 8px; align-items: center; height: 48px; }
+	.header-title { color: var(--text-color); font-weight: 500; }
+	.header-subtitle { color: var(--ink-gray-6); }
+	.item-anchor { display: block; padding: 6px 8px; color: var(--ink-gray-6); text-decoration: none; }
+	.sidebar-item-container:hover { background: var(--sidebar-hover-color); }
+	.active-sidebar { background: var(--sidebar-active-color); border-radius: 8px; }
+	.notifications-list { background: #ffffff; border: 1px solid #ddd; padding: 8px; margin-top: 8px; color: var(--text-color); }
+	.notification-item { color: var(--text-color); }
+	.icon { width: 16px; height: 16px; stroke: var(--icon-stroke); fill: none; }
+	.main { flex: 1; padding: 16px; }
+	.widgets { display: flex; gap: 12px; }
+	.widget { border-radius: var(--border-radius-lg); background-color: var(--card-bg); border: 1px solid var(--border-color); padding: 12px; width: 160px; }
+	.desktop-container .icons { display: flex; gap: 12px; margin-top: 16px; }
+	.desktop-container .desktop-icon { width: 90px; text-align: center; border-radius: 20px; }
+	.desktop-container .icon-container { width: 54px; height: 54px; margin: auto; border-radius: 16px; overflow: hidden; background: #2f64b0; }
+	.desktop-navbar { height: 44px; background: var(--bg-color); border-bottom: 1px solid var(--border-color); }
+</style>
+<!-- Stock Addon's theme, as far as it fights this app (stock_addon.bundle.css). -->
+<style id="hostile" media="not all">
+	:root { --agri-shell: #3A5F86; --agri-shell-text: #EAF1FA; --agri-shell-marker: #F0AB00; --agri-primary-dark: #0A2540; --agri-radius: 4px; --agri-wash: #F5F8FC; }
+	html:not([data-theme="dark"]) .body-sidebar, html:not([data-theme="dark"]) .body-sidebar-container { background: var(--agri-shell) !important; }
+	html:not([data-theme="dark"]) .body-sidebar-container * { background-color: transparent !important; }
+	html:not([data-theme="dark"]) .body-sidebar-container, html:not([data-theme="dark"]) .body-sidebar-container * { color: var(--agri-shell-text) !important; }
+	html:not([data-theme="dark"]) .body-sidebar-container .sidebar-item-container.selected * { color: var(--agri-primary-dark) !important; }
+	.widget.number-widget-box { border-radius: var(--agri-radius) !important; }
+	html.sa-cockpit:not([data-theme="dark"]) .page-container[data-page-route="Workspaces"] .widget.links-widget-box { border-radius: var(--agri-radius) !important; }
+	html:not([data-theme="dark"]) .layout-main-section { background: var(--agri-wash) !important; }
+</style>
+<script src="harness.js"></script>
+<script>load_app_file("/cyvetech_ui/public/css/cyvetech_ui.css")</script>
+<script>
+	window.frappe = make_frappe({
+		cyvetech_ui: {
+			theme: {
+				enabled: 1, top_bar: 1, rounded: 1,
+				vars: {
+					"--cvt-sidebar-bg": "#16335e", "--cvt-sidebar-deep": "#132d53", "--cvt-sidebar-text": "#ffffff",
+					"--cvt-sidebar-muted": "#b9c2cf", "--cvt-sidebar-hover": "#2d4770", "--cvt-sidebar-border": "#34507a",
+					"--cvt-highlight": "#eaa51a", "--cvt-highlight-deep": "#b07c14", "--cvt-highlight-text": "#111827",
+					"--cvt-page-bg": "#f4f6fa", "--cvt-page-text": "#111827", "--cvt-tile-radius": "16px",
+					// what a tampered boot would carry: both must be refused
+					"--cvt-page-text-evil": "red; } body { display: none",
+					"--not-ours": "#ff0000",
+				},
+			},
+			branding: { logo: "/files/brand.png", favicon: "/files/favicon.png", product_name: "Luuka ERP", replace_all: 0 },
+			hidden_modules: ["Quality", 'Bob\'s "Tools"'],
+		},
+		apps_data: {
+			apps: [
+				{ name: "frappe", app_title: "Framework", app_logo_url: "/assets/frappe/images/frappe-framework-logo.svg" },
+				{ name: "erpnext", app_title: "ERPNext", app_logo_url: "/assets/erpnext/images/erpnext-logo.svg" },
+				{ name: "hrms", app_title: "Frappe HR", app_logo_url: "/assets/hrms/images/frappe-hr-logo.svg" },
+			],
+		},
+	});
+</script>
+<script>load_app_file("/cyvetech_ui/public/js/cyvetech_ui_desk.js")</script>
+</head>
+<body>
+<header class="desktop-navbar"></header>
+<div class="layout">
+	<div class="body-sidebar-container">
+		<div class="body-sidebar">
+			<a class="sidebar-header"><div class="title-container">
+				<div class="sidebar-item-label header-title">Selling</div>
+				<div class="sidebar-item-label header-subtitle">ERPNext</div>
+			</div></a>
+			<div class="sidebar-item-container"><a class="item-anchor" id="plain-item" href="#"><svg class="icon"><use></use></svg> Quotation</a></div>
+			<div class="sidebar-item-container active-sidebar selected" id="active"><a class="item-anchor" id="active-item" href="#">Sales Order</a></div>
+			<div class="sidebar-item-container"><a class="item-anchor" href="#">Sales Invoice</a></div>
+			<div class="dropdown-notifications">
+				<div class="notifications-list"><div class="notification-item" id="note">You were mentioned on SO-0001</div></div>
+			</div>
+		</div>
+	</div>
+	<div class="main page-container" data-page-route="Workspaces">
+		<div class="layout-main-section">
+			<div class="widgets">
+				<div class="widget number-widget-box" id="number">Sales Orders</div>
+				<div class="widget links-widget-box" id="links">Selling</div>
+				<div class="widget dashboard-widget-box" id="chart">Trends</div>
+			</div>
+			<div class="desktop-container">
+				<div class="icons">
+					<a class="desktop-icon" data-id="Selling" id="tile-selling"><div class="icon-container"></div>Selling</a>
+					<a class="desktop-icon" data-id="Quality" id="tile-quality"><div class="icon-container"></div>Quality</a>
+					<a class="desktop-icon" data-id='Bob&#39;s "Tools"' id="tile-bob"><div class="icon-container"></div>Bob's "Tools"</a>
+				</div>
+			</div>
+		</div>
+	</div>
+</div>
+<div id="results"></div>
+<script>
+	const NAVY = "rgb(22, 51, 94)", GOLD = "rgb(234, 165, 26)", WHITE = "rgb(255, 255, 255)", INK = "rgb(17, 24, 39)";
+
+	function scenario(name) {
+		check(`${name}: sidebar is the chosen color`, css(".body-sidebar", "background-color") === NAVY, css(".body-sidebar", "background-color"));
+		check(`${name}: menu items read white on it`, css("#plain-item", "color") === WHITE, css("#plain-item", "color"));
+		check(`${name}: selected item is the highlight`, css("#active", "background-color") === GOLD, css("#active", "background-color"));
+		check(`${name}: selected item's text reads on the highlight`, css("#active-item", "color") === INK, css("#active-item", "color"));
+		check(`${name}: selected item's own text color reads on the highlight too`, css("#active", "color") === INK, css("#active", "color"));
+		check(`${name}: number card is rounded`, css("#number", "border-top-left-radius") === "16px", css("#number", "border-top-left-radius"));
+		check(`${name}: link card is rounded`, css("#links", "border-top-left-radius") === "16px", css("#links", "border-top-left-radius"));
+	}
+
+	const root = document.documentElement;
+	check("theme classes are on <html>", ["cvt-theme", "cvt-top-bar", "cvt-rounded"].every((c) => root.classList.contains(c)), root.className);
+	const vars = document.getElementById("cvt-theme-vars").textContent;
+	check("a tampered value never reaches the stylesheet", !vars.includes("display") && !vars.includes("evil"), vars);
+	check("a variable that is not ours never reaches it", !vars.includes("--not-ours"), vars);
+
+	scenario("plain v16");
+	check("sidebar icons are stroked in the text color", css(".body-sidebar .icon", "stroke") === WHITE, css(".body-sidebar .icon", "stroke"));
+	check("the notifications list inside the sidebar keeps dark text", css("#note", "color") === "rgb(56, 56, 56)", css("#note", "color"));
+	check("the central area is the page color", css("body", "background-color") === "rgb(244, 246, 250)", css("body", "background-color"));
+	check("the desktop's top bar takes the sidebar's deeper shade", css(".desktop-navbar", "background-color") === "rgb(19, 45, 83)", css(".desktop-navbar", "background-color"));
+	check("chart card is rounded", css("#chart", "border-top-left-radius") === "16px", css("#chart", "border-top-left-radius"));
+	check("desktop tile icon is rounded", css("#tile-selling .icon-container", "border-top-left-radius") === "16px", css("#tile-selling .icon-container", "border-top-left-radius"));
+	check("a module taken off the desk is hidden", css("#tile-quality", "display") === "none", css("#tile-quality", "display"));
+	check("a module whose name has quotes is hidden too", css("#tile-bob", "display") === "none", css("#tile-bob", "display"));
+	check("the other modules still show", css("#tile-selling", "display") !== "none", css("#tile-selling", "display"));
+
+	const apps = frappe.boot.apps_data.apps;
+	check("ERPNext's logo becomes the navigation logo", apps[1].app_logo_url === "/files/brand.png", apps[1]);
+	check("Frappe's logo becomes the navigation logo", apps[0].app_logo_url === "/files/brand.png", apps[0]);
+	check("another app keeps its own logo", apps[2].app_logo_url === "/assets/hrms/images/frappe-hr-logo.svg", apps[2]);
+	check("ERPNext is renamed to the product name", apps[1].app_title === "Luuka ERP", apps[1]);
+	check("another app keeps its name", apps[2].app_title === "Frappe HR", apps[2]);
+	check("the browser icon is the chosen one", document.querySelector('link[rel~="icon"]').getAttribute("href") === "/files/favicon.png", document.querySelector('link[rel~="icon"]').getAttribute("href"));
+
+	// Stock Addon's theme switched on
+	root.classList.add("sa-cockpit");
+	document.getElementById("hostile").media = "all";
+	scenario("beside Stock Addon's theme");
+	check("beside Stock Addon's theme: its page wash is the chosen page color", css(".layout-main-section", "background-color") === "rgb(244, 246, 250)", css(".layout-main-section", "background-color"));
+	document.getElementById("hostile").media = "not all";
+
+	// dark mode keeps Frappe's own colors
+	root.setAttribute("data-theme", "dark");
+	check("dark mode: the sidebar is left to Frappe", css(".body-sidebar", "background-color") !== NAVY, css(".body-sidebar", "background-color"));
+	check("dark mode: tiles stay rounded", css("#number", "border-top-left-radius") === "16px", css("#number", "border-top-left-radius"));
+	root.setAttribute("data-theme", "light");
+
+	// switching the theme off takes every trace away
+	cyvetech_ui.apply_theme({ enabled: 0, rounded: 0, vars: {} });
+	check("theme off: the sidebar is Frappe's again", css(".body-sidebar", "background-color") === "rgb(248, 248, 248)", css(".body-sidebar", "background-color"));
+	check("theme off: cards have Frappe's radius", css("#number", "border-top-left-radius") === "12px", css("#number", "border-top-left-radius"));
+	check("theme off: its style block is gone", !document.getElementById("cvt-theme-vars"), "still there");
+
+	report();
+</script>
+</body>
+</html>

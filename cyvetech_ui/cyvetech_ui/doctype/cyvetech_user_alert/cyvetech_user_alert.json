@@ -1,0 +1,166 @@
+{
+ "actions": [],
+ "autoname": "format:ALERT-{YYYY}-{#####}",
+ "creation": "2026-09-28 09:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "subject",
+  "priority",
+  "column_break_status",
+  "sent_on",
+  "delivered_to",
+  "section_message",
+  "message",
+  "section_recipients",
+  "recipients",
+  "column_break_recipients",
+  "roles",
+  "section_reference",
+  "reference_doctype",
+  "column_break_reference",
+  "reference_name",
+  "amended_from"
+ ],
+ "fields": [
+  {
+   "fieldname": "subject",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Subject",
+   "length": 140,
+   "reqd": 1
+  },
+  {
+   "default": "Normal",
+   "description": "Normal alerts pop up briefly. Important ones stay until they are closed. Urgent ones open a message the user has to acknowledge.",
+   "fieldname": "priority",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Priority",
+   "options": "Normal\nImportant\nUrgent"
+  },
+  {
+   "fieldname": "column_break_status",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "sent_on",
+   "fieldtype": "Datetime",
+   "in_list_view": 1,
+   "label": "Sent On",
+   "no_copy": 1,
+   "read_only": 1
+  },
+  {
+   "description": "How many users received it.",
+   "fieldname": "delivered_to",
+   "fieldtype": "Int",
+   "label": "Delivered To",
+   "no_copy": 1,
+   "read_only": 1
+  },
+  {
+   "fieldname": "section_message",
+   "fieldtype": "Section Break",
+   "label": "Message"
+  },
+  {
+   "fieldname": "message",
+   "fieldtype": "Text Editor",
+   "label": "Message"
+  },
+  {
+   "description": "Send to named users, to everyone with a role, or both.",
+   "fieldname": "section_recipients",
+   "fieldtype": "Section Break",
+   "label": "Recipients"
+  },
+  {
+   "fieldname": "recipients",
+   "fieldtype": "Table MultiSelect",
+   "label": "Users",
+   "options": "CyveTech Alert Recipient"
+  },
+  {
+   "fieldname": "column_break_recipients",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "roles",
+   "fieldtype": "Table MultiSelect",
+   "label": "Everyone With These Roles",
+   "options": "Has Role"
+  },
+  {
+   "collapsible": 1,
+   "fieldname": "section_reference",
+   "fieldtype": "Section Break",
+   "label": "Link to a Document"
+  },
+  {
+   "fieldname": "reference_doctype",
+   "fieldtype": "Link",
+   "label": "Document Type",
+   "options": "DocType"
+  },
+  {
+   "fieldname": "column_break_reference",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "reference_name",
+   "fieldtype": "Dynamic Link",
+   "label": "Document",
+   "options": "reference_doctype"
+  },
+  {
+   "fieldname": "amended_from",
+   "fieldtype": "Link",
+   "label": "Amended From",
+   "no_copy": 1,
+   "options": "CyveTech User Alert",
+   "print_hide": 1,
+   "read_only": 1,
+   "search_index": 1
+  }
+ ],
+ "index_web_pages_for_search": 1,
+ "is_submittable": 1,
+ "links": [],
+ "modified": "2026-09-28 09:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "CyveTech UI",
+ "name": "CyveTech User Alert",
+ "naming_rule": "Expression",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "print": 1,
+   "read": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1,
+   "amend": 1,
+   "cancel": 1,
+   "export": 1,
+   "report": 1,
+   "submit": 1
+  },
+  {
+   "print": 1,
+   "read": 1,
+   "role": "All"
+  }
+ ],
+ "show_title_field_in_link": 1,
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": [],
+ "title_field": "subject",
+ "track_changes": 1
+}

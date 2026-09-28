@@ -1,0 +1,406 @@
+{
+ "actions": [],
+ "creation": "2026-09-28 09:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "tab_branding",
+  "brand_logo",
+  "replace_all_app_logos",
+  "column_break_branding",
+  "favicon",
+  "product_name",
+  "tab_theme",
+  "section_colors",
+  "apply_theme",
+  "sidebar_color",
+  "sidebar_text_color",
+  "column_break_colors",
+  "highlight_color",
+  "page_color",
+  "color_top_bar",
+  "section_tiles",
+  "rounded_tiles",
+  "tile_radius",
+  "column_break_tiles",
+  "theme_preview",
+  "tab_charts",
+  "apply_chart_colors",
+  "vary_single_series",
+  "override_chart_colors",
+  "section_palette",
+  "chart_color_1",
+  "chart_color_2",
+  "chart_color_3",
+  "chart_color_4",
+  "column_break_palette",
+  "chart_color_5",
+  "chart_color_6",
+  "chart_color_7",
+  "chart_color_8",
+  "tab_login",
+  "login_enabled",
+  "login_logo",
+  "login_image",
+  "column_break_login",
+  "login_heading",
+  "login_tagline",
+  "section_login_colors",
+  "login_panel_color",
+  "login_button_color",
+  "column_break_login_colors",
+  "login_background_color",
+  "tab_alerts",
+  "alerts_panel",
+  "popup_notifications",
+  "column_break_alerts",
+  "popup_seconds",
+  "popup_sound",
+  "tab_modules",
+  "desk_modules_help",
+  "desk_modules"
+ ],
+ "fields": [
+  {
+   "fieldname": "tab_branding",
+   "fieldtype": "Tab Break",
+   "label": "Branding"
+  },
+  {
+   "description": "Replaces the ERPNext and Frappe logos in the desk: the app switcher, the desktop's top bar and the sign-in page. A wide logo about 240 × 64 px works best. Upload it as a public file.",
+   "fieldname": "brand_logo",
+   "fieldtype": "Attach Image",
+   "label": "Navigation Logo"
+  },
+  {
+   "default": "0",
+   "description": "Off: only ERPNext's and Frappe's own logos are replaced. On: every app in the app switcher shows it.",
+   "fieldname": "replace_all_app_logos",
+   "fieldtype": "Check",
+   "label": "Use the Navigation Logo for Every App"
+  },
+  {
+   "fieldname": "column_break_branding",
+   "fieldtype": "Column Break"
+  },
+  {
+   "description": "The small icon on the browser tab. A square PNG or SVG, 64 × 64 px or larger. Upload it as a public file.",
+   "fieldname": "favicon",
+   "fieldtype": "Attach Image",
+   "label": "Browser Icon (Favicon)"
+  },
+  {
+   "description": "Optional. Shown on the browser tab, and in place of \"ERPNext\" under the app name at the top of the sidebar.",
+   "fieldname": "product_name",
+   "fieldtype": "Data",
+   "label": "Product Name"
+  },
+  {
+   "fieldname": "tab_theme",
+   "fieldtype": "Tab Break",
+   "label": "Desk Theme"
+  },
+  {
+   "fieldname": "section_colors",
+   "fieldtype": "Section Break",
+   "label": "Colors"
+  },
+  {
+   "default": "1",
+   "description": "Light mode only: dark mode keeps its own colors.",
+   "fieldname": "apply_theme",
+   "fieldtype": "Check",
+   "label": "Apply These Colors"
+  },
+  {
+   "default": "#16335E",
+   "fieldname": "sidebar_color",
+   "fieldtype": "Color",
+   "label": "Sidebar (Left Menu)"
+  },
+  {
+   "description": "Leave blank to use white or dark text, whichever reads better on the sidebar color.",
+   "fieldname": "sidebar_text_color",
+   "fieldtype": "Color",
+   "label": "Sidebar Text"
+  },
+  {
+   "fieldname": "column_break_colors",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "#EAA51A",
+   "fieldname": "highlight_color",
+   "fieldtype": "Color",
+   "label": "Selected Menu Item"
+  },
+  {
+   "default": "#F4F6FA",
+   "fieldname": "page_color",
+   "fieldtype": "Color",
+   "label": "Page Background (Central Area)"
+  },
+  {
+   "default": "1",
+   "fieldname": "color_top_bar",
+   "fieldtype": "Check",
+   "label": "Also Color the Desktop's Top Bar"
+  },
+  {
+   "fieldname": "section_tiles",
+   "fieldtype": "Section Break",
+   "label": "Tiles and Cards"
+  },
+  {
+   "default": "1",
+   "fieldname": "rounded_tiles",
+   "fieldtype": "Check",
+   "label": "Round the Corners of Tiles and Cards"
+  },
+  {
+   "default": "16",
+   "depends_on": "eval:doc.rounded_tiles",
+   "description": "From 0 to 32. 16 matches the app icons on the desktop.",
+   "fieldname": "tile_radius",
+   "fieldtype": "Int",
+   "label": "Corner Radius (px)"
+  },
+  {
+   "fieldname": "column_break_tiles",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "theme_preview",
+   "fieldtype": "HTML",
+   "label": "Preview"
+  },
+  {
+   "fieldname": "tab_charts",
+   "fieldtype": "Tab Break",
+   "label": "Charts"
+  },
+  {
+   "default": "1",
+   "fieldname": "apply_chart_colors",
+   "fieldtype": "Check",
+   "label": "Use This Palette for Charts"
+  },
+  {
+   "default": "1",
+   "description": "A chart with one series takes a color from its title, so the charts on a workspace are told apart and each chart keeps its color wherever it appears.",
+   "fieldname": "vary_single_series",
+   "fieldtype": "Check",
+   "label": "Give Each Single-Series Chart Its Own Color"
+  },
+  {
+   "default": "0",
+   "description": "Off keeps the colors a report or dashboard chart sets on purpose, such as red for overdue.",
+   "fieldname": "override_chart_colors",
+   "fieldtype": "Check",
+   "label": "Also Recolor Charts That Choose Their Own Colors"
+  },
+  {
+   "description": "Used in this order: a chart with several series takes the first colors first. The default order keeps every pair of neighbors distinguishable for color-blind readers, so change the colors with care.",
+   "fieldname": "section_palette",
+   "fieldtype": "Section Break",
+   "label": "Palette"
+  },
+  {
+   "default": "#2F64B0",
+   "fieldname": "chart_color_1",
+   "fieldtype": "Color",
+   "label": "Color 1"
+  },
+  {
+   "default": "#EB6834",
+   "fieldname": "chart_color_2",
+   "fieldtype": "Color",
+   "label": "Color 2"
+  },
+  {
+   "default": "#1BAF7A",
+   "fieldname": "chart_color_3",
+   "fieldtype": "Color",
+   "label": "Color 3"
+  },
+  {
+   "default": "#EAA51A",
+   "fieldname": "chart_color_4",
+   "fieldtype": "Color",
+   "label": "Color 4"
+  },
+  {
+   "fieldname": "column_break_palette",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "#E87BA4",
+   "fieldname": "chart_color_5",
+   "fieldtype": "Color",
+   "label": "Color 5"
+  },
+  {
+   "default": "#008300",
+   "fieldname": "chart_color_6",
+   "fieldtype": "Color",
+   "label": "Color 6"
+  },
+  {
+   "default": "#4A3AA7",
+   "fieldname": "chart_color_7",
+   "fieldtype": "Color",
+   "label": "Color 7"
+  },
+  {
+   "default": "#E34948",
+   "fieldname": "chart_color_8",
+   "fieldtype": "Color",
+   "label": "Color 8"
+  },
+  {
+   "fieldname": "tab_login",
+   "fieldtype": "Tab Break",
+   "label": "Sign-in Page"
+  },
+  {
+   "default": "1",
+   "fieldname": "login_enabled",
+   "fieldtype": "Check",
+   "label": "Use the Branded Sign-in Page"
+  },
+  {
+   "description": "Leave blank to use the Navigation Logo. Upload it as a public file. The sign-in page is seen before anyone logs in.",
+   "fieldname": "login_logo",
+   "fieldtype": "Attach Image",
+   "label": "Sign-in Logo"
+  },
+  {
+   "description": "Optional picture behind the brand panel, darkened so the text stays readable. Upload it as a public file.",
+   "fieldname": "login_image",
+   "fieldtype": "Attach Image",
+   "label": "Brand Panel Picture"
+  },
+  {
+   "fieldname": "column_break_login",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "Welcome back",
+   "description": "Leave blank for the default.",
+   "fieldname": "login_heading",
+   "fieldtype": "Data",
+   "label": "Heading"
+  },
+  {
+   "default": "Sign in to pick up where you left off.",
+   "description": "Leave blank for the default.",
+   "fieldname": "login_tagline",
+   "fieldtype": "Small Text",
+   "label": "Tagline"
+  },
+  {
+   "fieldname": "section_login_colors",
+   "fieldtype": "Section Break",
+   "label": "Sign-in Colors"
+  },
+  {
+   "default": "#16335E",
+   "fieldname": "login_panel_color",
+   "fieldtype": "Color",
+   "label": "Brand Panel"
+  },
+  {
+   "default": "#16335E",
+   "fieldname": "login_button_color",
+   "fieldtype": "Color",
+   "label": "Sign-in Button"
+  },
+  {
+   "fieldname": "column_break_login_colors",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "#F4F6FA",
+   "fieldname": "login_background_color",
+   "fieldtype": "Color",
+   "label": "Page Background"
+  },
+  {
+   "fieldname": "tab_alerts",
+   "fieldtype": "Tab Break",
+   "label": "Alerts"
+  },
+  {
+   "default": "1",
+   "description": "A panel in the bottom-right corner of the desk with each user's open assignments, notifications and alerts, most urgent first.",
+   "fieldname": "alerts_panel",
+   "fieldtype": "Check",
+   "label": "Show the My Alerts Panel"
+  },
+  {
+   "default": "1",
+   "description": "Show each new notification the moment it arrives. Alerts sent from CyveTech User Alert always pop up, including ones that arrived while the user was away.",
+   "fieldname": "popup_notifications",
+   "fieldtype": "Check",
+   "label": "Pop Up New Notifications"
+  },
+  {
+   "fieldname": "column_break_alerts",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "8",
+   "description": "From 3 to 60. Important and Urgent alerts stay until they are closed.",
+   "fieldname": "popup_seconds",
+   "fieldtype": "Int",
+   "label": "Pop-up Duration (Seconds)"
+  },
+  {
+   "default": "1",
+   "description": "Respects each user's Mute Sounds setting.",
+   "fieldname": "popup_sound",
+   "fieldtype": "Check",
+   "label": "Play a Sound"
+  },
+  {
+   "fieldname": "tab_modules",
+   "fieldtype": "Tab Break",
+   "label": "Desk Modules"
+  },
+  {
+   "fieldname": "desk_modules_help",
+   "fieldtype": "HTML"
+  },
+  {
+   "description": "Untick a module to take its tile off everyone's desktop. This changes what shows, not who may open it: use roles and Module Profiles for access.",
+   "fieldname": "desk_modules",
+   "fieldtype": "Table",
+   "label": "Modules on the Desk",
+   "options": "CyveTech Desk Module"
+  }
+ ],
+ "index_web_pages_for_search": 1,
+ "issingle": 1,
+ "links": [],
+ "modified": "2026-09-28 09:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "CyveTech UI",
+ "name": "CyveTech UI Settings",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "print": 1,
+   "read": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": [],
+ "track_changes": 1
+}

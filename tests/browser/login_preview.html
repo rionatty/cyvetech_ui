@@ -1,0 +1,115 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sign-in page preview</title>
+<!--
+	A static stand-in for the sign-in page, to see cyvetech_ui_login.css without
+	a bench: Frappe's own markup for the page (templates/web.html and
+	www/login.html) inside this app's wrapper (www/login.html), with the
+	shipped default colors. The few Bootstrap and login.bundle rules the card
+	leans on are approximated below; on a real site Frappe supplies them.
+
+	?image=1 shows the brand panel with a picture behind it.
+-->
+<style>
+	body { margin: 0; font: 14px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif; }
+	*, *::before, *::after { box-sizing: border-box; }
+	.form-group { margin-bottom: 14px; }
+	.form-control { display: block; width: 100%; padding: 8px 12px; font: inherit; border: 1px solid #ced4da; }
+	.email-field, .password-field { position: relative; }
+	.btn { display: inline-block; font: inherit; cursor: pointer; }
+	.btn-block { display: block; width: 100%; }
+	.page-card-head { display: flex; flex-direction: column; align-items: center; gap: 12px; margin-bottom: 24px; text-align: center; }
+	.page-card-head img.app-logo { max-height: 32px; }
+	.page-card-head h4 { margin: 0; }
+	.page-card-subtitle { margin: 4px 0 0; }
+	.forgot-password-message { text-align: right; margin: 0 0 8px; font-size: 13px; }
+	.sign-up-message { margin: 16px 0 0; text-align: center; font-size: 13px; }
+	a { text-decoration: none; }
+</style>
+<link rel="stylesheet" href="/cyvetech_ui/public/css/cyvetech_ui_login.css">
+<style>
+	/* what login.html prints from the settings (login_rules.py), shipped defaults */
+	:root {
+		--cvt-login-panel: #16335E;
+		--cvt-login-panel-deep: #0E213D;
+		--cvt-login-panel-text: #FFFFFF;
+		--cvt-login-button: #16335E;
+		--cvt-login-button-hover: #122A4D;
+		--cvt-login-button-text: #FFFFFF;
+		--cvt-login-link: #16335E;
+		--cvt-login-background: #F4F6FA;
+	}
+</style>
+</head>
+<body data-path="login" frappe-session-status="logged-out">
+<div id="page-login" data-path="login">
+	<div class="page-content-wrapper">
+		<div class="page-breadcrumbs"></div>
+		<main class="container">
+			<div class="page-header-wrapper"><div class="page-header"></div></div>
+			<div class="page_content">
+				<div class="cvt-login cvt-login-has-logo" id="wrapper">
+					<aside class="cvt-login-brand" id="brand">
+						<div class="cvt-login-brand-inner">
+							<div class="cvt-login-logo">
+								<img alt="Luuka ERP" src="data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='48'%3E%3Crect width='48' height='48' rx='12' fill='%2316335E'/%3E%3Ctext x='24' y='32' font-family='Georgia' font-size='26' font-weight='700' fill='%23EAA51A' text-anchor='middle'%3EL%3C/text%3E%3Ctext x='60' y='32' font-family='system-ui' font-size='22' font-weight='700' fill='%2316335E'%3ELuuka ERP%3C/text%3E%3C/svg%3E">
+							</div>
+							<h1 class="cvt-login-heading">Welcome back</h1>
+							<p class="cvt-login-tagline">Sign in to pick up where you left off.</p>
+						</div>
+						<p class="cvt-login-product">Luuka ERP</p>
+					</aside>
+					<main class="cvt-login-main">
+						<div class="cvt-login-card">
+							<div>
+								<section class="for-login">
+									<div class="login-content page-card">
+										<div class="page-card-head">
+											<img class="app-logo" alt="" src="data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='32' height='32'%3E%3Crect width='32' height='32' rx='8' fill='%23999'/%3E%3C/svg%3E">
+											<div class="page-card-head-text">
+												<h4>Sign In</h4>
+												<p class="page-card-subtitle">Welcome! Please sign in to continue.</p>
+											</div>
+										</div>
+										<form class="form-signin form-login" onsubmit="return false">
+											<div class="page-card-body">
+												<div class="form-group">
+													<label class="form-label" for="login_email">Email</label>
+													<div class="email-field"><input type="text" id="login_email" class="form-control" placeholder="jane@example.com"></div>
+												</div>
+												<div class="form-group">
+													<label class="form-label" for="login_password">Password</label>
+													<div class="password-field"><input type="password" id="login_password" class="form-control" placeholder="•••••••••"></div>
+												</div>
+												<p class="forgot-password-message"><a href="#forgot">Forgot password?</a></p>
+											</div>
+											<div class="page-card-actions">
+												<button class="btn btn-sm btn-default btn-block btn-login" type="submit">Continue</button>
+												<a class="btn btn-sm btn-default btn-block btn-login-option" href="#login-with-email-link" style="margin-top:10px">Login with Email Link</a>
+											</div>
+										</form>
+									</div>
+								</section>
+							</div>
+						</div>
+					</main>
+				</div>
+			</div>
+		</main>
+	</div>
+</div>
+<script>
+	if (new URLSearchParams(location.search).get("image")) {
+		const wrapper = document.getElementById("wrapper");
+		wrapper.classList.add("cvt-login-has-image");
+		document.getElementById("brand").style.setProperty(
+			"--cvt-login-image",
+			"url('data:image/svg+xml;utf8,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22800%22 height=%22800%22%3E%3Crect width=%22800%22 height=%22800%22 fill=%22%23f6921e%22/%3E%3Ccircle cx=%22600%22 cy=%22200%22 r=%22260%22 fill=%22%23eaa51a%22/%3E%3C/svg%3E')"
+		);
+	}
+</script>
+</body>
+</html>

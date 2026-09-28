@@ -1,0 +1,328 @@
+/*
+ * CyveTech UI — the sign-in page (www/login.html).
+ *
+ * Linked after Frappe's own login.bundle.css, so a rule here wins over one of
+ * Frappe's of the same weight; the leading `body` gives each rule one extra
+ * type selector to be sure. Frappe's card, forms, ids and buttons keep their
+ * own classes: this restyles them and lays the brand panel out beside them.
+ *
+ * The colors arrive from login.html as custom properties on :root
+ * (validated in login_rules.py); the values below are only the fallbacks.
+ */
+
+:root {
+	--cvt-login-panel: #16335e;
+	--cvt-login-panel-deep: #0e213d;
+	--cvt-login-panel-text: #ffffff;
+	--cvt-login-button: #16335e;
+	--cvt-login-button-hover: #122a4d;
+	--cvt-login-button-text: #ffffff;
+	--cvt-login-link: #16335e;
+	--cvt-login-background: #f4f6fa;
+	--cvt-login-ink: #0f172a;
+	--cvt-login-muted: #64748b;
+	--cvt-login-line: #d5dce6;
+	--cvt-login-radius: 18px;
+}
+
+/* ── The page: the whole window, none of the website's page chrome ─────── */
+
+body[data-path="login"] {
+	background-color: var(--cvt-login-background);
+}
+
+body[data-path="login"] .page-content-wrapper {
+	min-height: 0;
+	padding: 0;
+}
+
+body[data-path="login"] .page-content-wrapper > main.container {
+	max-width: none;
+	width: 100%;
+	margin: 0;
+	padding: 0;
+}
+
+body[data-path="login"] .page-breadcrumbs,
+body[data-path="login"] .page-header-wrapper,
+body[data-path="login"] .page-footer {
+	display: none;
+}
+
+body[data-path="login"] .page_content {
+	margin: 0;
+	padding: 0;
+}
+
+/* ── Layout: brand panel beside the card ────────────────────────────────── */
+
+body .cvt-login {
+	display: grid;
+	grid-template-columns: minmax(360px, 44%) 1fr;
+	min-height: 100vh;
+	background: var(--cvt-login-background);
+	color: var(--cvt-login-ink);
+}
+
+body .cvt-login-brand {
+	position: relative;
+	display: flex;
+	flex-direction: column;
+	justify-content: space-between;
+	gap: 32px;
+	padding: 56px 56px 40px;
+	overflow: hidden;
+	color: var(--cvt-login-panel-text);
+	background: linear-gradient(155deg, var(--cvt-login-panel) 0%, var(--cvt-login-panel-deep) 100%);
+}
+
+/* two soft rings of light, for depth without a picture */
+body .cvt-login-brand::after {
+	content: "";
+	position: absolute;
+	inset: 0;
+	pointer-events: none;
+	background:
+		radial-gradient(circle at 85% 12%, rgba(255, 255, 255, 0.12) 0, rgba(255, 255, 255, 0) 34%),
+		radial-gradient(circle at 10% 95%, rgba(255, 255, 255, 0.08) 0, rgba(255, 255, 255, 0) 40%);
+}
+
+/* with a picture: the picture behind, the panel's colors over it so the text
+   stays readable whatever the picture is */
+body .cvt-login-has-image .cvt-login-brand {
+	background: var(--cvt-login-image) center / cover no-repeat, var(--cvt-login-panel);
+}
+
+body .cvt-login-has-image .cvt-login-brand::before {
+	content: "";
+	position: absolute;
+	inset: 0;
+	pointer-events: none;
+	background: linear-gradient(155deg, var(--cvt-login-panel) 0%, var(--cvt-login-panel-deep) 100%);
+	/* 80% keeps white text at 6:1 or better over even a white picture */
+	opacity: 0.8;
+}
+
+body .cvt-login-brand > * {
+	position: relative;
+	z-index: 1;
+}
+
+body .cvt-login-brand-inner {
+	display: flex;
+	flex-direction: column;
+	gap: 20px;
+	margin: auto 0;
+	max-width: 440px;
+}
+
+/* a white tile, so a dark logo reads on a dark panel and a light one on a light panel */
+body .cvt-login-logo {
+	align-self: flex-start;
+	padding: 14px 18px;
+	border-radius: 16px;
+	background: #ffffff;
+	box-shadow: 0 10px 30px -12px rgba(0, 0, 0, 0.45);
+}
+
+body .cvt-login-logo img {
+	display: block;
+	max-width: 220px;
+	max-height: 56px;
+	object-fit: contain;
+}
+
+body .cvt-login-heading {
+	margin: 12px 0 0;
+	font-size: 36px;
+	line-height: 1.15;
+	font-weight: 700;
+	letter-spacing: -0.02em;
+	color: inherit;
+}
+
+body .cvt-login-tagline {
+	margin: 0;
+	max-width: 34ch;
+	font-size: 17px;
+	line-height: 1.55;
+	opacity: 0.86;
+}
+
+body .cvt-login-product {
+	margin: 0;
+	font-size: 12px;
+	font-weight: 600;
+	letter-spacing: 0.08em;
+	text-transform: uppercase;
+	opacity: 0.7;
+}
+
+body .cvt-login-main {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	padding: 48px 24px;
+}
+
+body .cvt-login-card {
+	width: 100%;
+	max-width: 420px;
+}
+
+/* ── Frappe's card, restyled ────────────────────────────────────────────── */
+
+body .cvt-login .page-card {
+	max-width: none;
+	margin: 0;
+	padding: 32px 28px 28px;
+	border: 1px solid rgba(15, 23, 42, 0.06);
+	border-radius: var(--cvt-login-radius);
+	background: #ffffff;
+	box-shadow:
+		0 24px 48px -24px rgba(15, 23, 42, 0.28),
+		0 2px 6px rgba(15, 23, 42, 0.05);
+}
+
+/* the brand panel already carries the logo */
+body .cvt-login-has-logo .page-card-head img.app-logo {
+	display: none;
+}
+
+body .cvt-login .page-card-head h4 {
+	font-size: 22px;
+	font-weight: 600;
+	letter-spacing: -0.01em;
+	color: var(--cvt-login-ink);
+}
+
+body .cvt-login .page-card-head .page-card-subtitle {
+	color: var(--cvt-login-muted);
+}
+
+body .cvt-login .page-card .form-label {
+	font-weight: 500;
+	color: var(--cvt-login-ink);
+}
+
+body .cvt-login .page-card input.form-control {
+	border: 1px solid var(--cvt-login-line);
+	border-radius: 10px;
+	background-color: #ffffff;
+}
+
+body .cvt-login .page-card input.form-control:focus {
+	border-color: var(--cvt-login-button);
+	outline: 2px solid var(--cvt-login-button);
+	outline-offset: 1px;
+	box-shadow: none;
+}
+
+body .cvt-login .page-card a {
+	color: var(--cvt-login-link);
+}
+
+/* the main action of each section: Continue, Send Link, Send login link */
+body .cvt-login .page-card .page-card-actions .btn-login,
+body .cvt-login .page-card .page-card-actions .btn-primary,
+body .cvt-login .page-card .btn-login,
+body .cvt-login .page-card .btn-forgot {
+	padding: 10px 14px;
+	border: 1px solid var(--cvt-login-button);
+	border-radius: 10px;
+	background: var(--cvt-login-button);
+	color: var(--cvt-login-button-text);
+	font-size: 14px;
+	font-weight: 600;
+	text-align: center;
+	box-shadow: none;
+	transition: background-color 0.15s ease, border-color 0.15s ease;
+}
+
+body .cvt-login .page-card .page-card-actions .btn-login:hover,
+body .cvt-login .page-card .page-card-actions .btn-primary:hover,
+body .cvt-login .page-card .btn-login:hover,
+body .cvt-login .page-card .btn-forgot:hover {
+	background: var(--cvt-login-button-hover);
+	border-color: var(--cvt-login-button-hover);
+	color: var(--cvt-login-button-text);
+}
+
+body .cvt-login .page-card .btn-login:focus-visible,
+body .cvt-login .page-card .btn-forgot:focus-visible,
+body .cvt-login .page-card .btn-login-option:focus-visible {
+	outline: 2px solid var(--cvt-login-button);
+	outline-offset: 2px;
+}
+
+/* the quieter options: email link, social logins */
+body .cvt-login .page-card .page-card-actions .btn-login-option {
+	padding: 10px 14px;
+	border: 1px solid var(--cvt-login-line);
+	border-radius: 10px;
+	background: #ffffff;
+	color: var(--cvt-login-ink);
+	font-size: 14px;
+	font-weight: 500;
+	text-align: center;
+}
+
+body .cvt-login .page-card .page-card-actions .btn-login-option:hover {
+	background: #f8fafc;
+}
+
+body .cvt-login .sign-up-message {
+	color: var(--cvt-login-muted);
+}
+
+/* ── Small screens: the panel becomes a band above the card ─────────────── */
+
+@media (max-width: 900px) {
+	body .cvt-login {
+		grid-template-columns: 1fr;
+	}
+
+	body .cvt-login-brand {
+		padding: 28px 24px;
+		gap: 16px;
+	}
+
+	body .cvt-login-brand-inner {
+		gap: 12px;
+	}
+
+	body .cvt-login-heading {
+		margin-top: 4px;
+		font-size: 26px;
+	}
+
+	body .cvt-login-tagline {
+		font-size: 15px;
+	}
+
+	body .cvt-login-product {
+		display: none;
+	}
+
+	body .cvt-login-main {
+		align-items: flex-start;
+		padding: 28px 16px 40px;
+	}
+}
+
+@media (prefers-reduced-motion: no-preference) {
+	body .cvt-login-card {
+		animation: cvt-login-rise 0.35s ease-out both;
+	}
+}
+
+@keyframes cvt-login-rise {
+	from {
+		opacity: 0;
+		transform: translateY(8px);
+	}
+	to {
+		opacity: 1;
+		transform: none;
+	}
+}

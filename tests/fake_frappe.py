@@ -165,7 +165,7 @@ class Document:
 	def as_dict(self):
 		return dict(self.__dict__["_data"])
 
-	def db_set(self, key, value):
+	def db_set(self, key, value, **kwargs):
 		self.set(key, value)
 
 
@@ -248,6 +248,13 @@ def install():
 	fake.get_meta = lambda doctype, *a, **k: Meta(doctype)
 	fake.msgprint = lambda *a, **k: fake.messages.append(a[0] if a else k.get("msg"))
 	fake.enqueue = lambda fn, **kwargs: fake.enqueued.append((fn, kwargs))
+
+	def sendmail(**kwargs):
+		if fake.fail_sendmail:
+			raise RuntimeError("no outgoing email account")
+		fake.sent_mail.append(_dict(kwargs))
+
+	fake.sendmail = sendmail
 	fake.db = FakeDB(fake)
 	fake.cache = FakeCache(fake)
 
@@ -256,6 +263,9 @@ def install():
 	utils.strip_html = lambda text: re.sub(r"<[^>]+>", "", text or "")
 	utils.today = lambda: fake.today
 	utils.now_datetime = lambda: datetime.datetime(2026, 9, 28, 9, 0)
+	utils.validate_email_address = lambda text, throw=False: text if re.fullmatch(r"[^@\s]+@[^@\s]+\.[^@\s]+", text or "") else ""
+	utils.get_url_to_form = lambda doctype, name: f"https://erp.example.com/app/{doctype.lower().replace(' ', '-')}/{name}"
+	utils.get_fullname = lambda user=None: fake.full_names.get(user, user)
 	fake.utils = utils
 
 	model = types.ModuleType("frappe.model")
@@ -287,6 +297,9 @@ def reset(fake):
 	fake.cleared = []
 	fake.errors = []
 	fake.logged = []
+	fake.sent_mail = []
+	fake.fail_sendmail = False
+	fake.full_names = {}
 	fake.meta_fields = {"Notification Log": {"subject", "description", "email_content"}}  # Frappe v16
 	fake.messages = []
 	fake.enqueued = []

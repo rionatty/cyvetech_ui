@@ -112,5 +112,44 @@ class Title(unittest.TestCase):
 		self.assertNotIn("wor…", cut)
 
 
+class EmailBody(unittest.TestCase):
+	def body(self, **changes):
+		args = {
+			"message_html": "<p>Count the <b>main store</b>.</p>",
+			"priority": "Normal",
+			"priority_label": "Normal",
+			"link": "https://erp.example.com/app/sales-order/SO-1",
+			"link_label": "Open Sales Order SO-1",
+			"footer": "Sent by Admin User from Luuka ERP",
+		}
+		args.update(changes)
+		return rules.email_body(**args)
+
+	def test_the_message_keeps_its_formatting(self):
+		self.assertIn("<p>Count the <b>main store</b>.</p>", self.body())
+
+	def test_every_other_piece_is_text(self):
+		body = self.body(
+			link_label="<script>x</script>", footer='Sent by "<b>Eve</b>"', link='https://x.example/a"onmouseover="y'
+		)
+		self.assertNotIn("<script>", body)
+		self.assertNotIn("<b>Eve</b>", body)
+		self.assertNotIn('"onmouseover', body)
+
+	def test_only_important_and_urgent_alerts_carry_a_pill(self):
+		self.assertNotIn("text-transform: uppercase", self.body())
+		self.assertIn(">Urgent</span>", self.body(priority="Urgent", priority_label="Urgent"))
+		self.assertIn(">Wichtig</span>", self.body(priority="Important", priority_label="Wichtig"))  # translated label
+
+	def test_the_button_takes_the_brand_color(self):
+		self.assertIn("background: #2f64b0", self.body(button="#2f64b0"))
+
+	def test_no_link_no_button(self):
+		self.assertNotIn("<a ", self.body(link=""))
+
+	def test_important_and_urgent_are_flagged_for_mail_clients(self):
+		self.assertEqual([rules.email_x_priority(p) for p in ("Normal", "Important", "Urgent", None)], [3, 1, 1, 3])
+
+
 if __name__ == "__main__":
 	unittest.main()

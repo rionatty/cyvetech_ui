@@ -310,11 +310,13 @@ class SendingAnAlert(Base):
 		super().setUp()
 		user_alert.CyveTechUserAlert._tables = ("recipients", "roles")
 		frappe.tables["User"] = [
-			{"name": "jane@example.com", "enabled": 1},
-			{"name": "bob@example.com", "enabled": 1},
-			{"name": "old@example.com", "enabled": 0},
-			{"name": "Guest", "enabled": 1},
+			{"name": "jane@example.com", "email": "jane@example.com", "enabled": 1},
+			{"name": "bob@example.com", "email": "bob@example.com", "enabled": 1},
+			{"name": "old@example.com", "email": "old@example.com", "enabled": 0},
+			{"name": "Guest", "email": "guest@example.com", "enabled": 1},
+			{"name": "kiosk", "email": "", "enabled": 1},  # a user with no email address
 		]
+		frappe.full_names = {"admin@example.com": "Admin User"}
 		frappe.tables["Has Role"] = [
 			{"parenttype": "User", "parent": "bob@example.com", "role": "Stock User"},
 			{"parenttype": "User", "parent": "old@example.com", "role": "Stock User"},
@@ -364,6 +366,58 @@ class SendingAnAlert(Base):
 			self.assertEqual((log["document_type"], log["document_name"]), ("CyveTech User Alert", "ALERT-1"))
 			self.assertEqual(log["subject"], "Count stock")
 			self.assertEqual(log["from_user"], "admin@example.com")
+
+	def submitted(self, **data):
+		doc = self.alert(**data)
+		frappe.docs[("CyveTech User Alert", "ALERT-1")] = doc
+		doc.on_submit()
+		return doc
+
+	def test_each_recipient_is_emailed_too_and_none_sees_the_others(self):
+		doc = self.submitted(send_email=1, recipients=[{"user": "jane@example.com"}, {"user": "bob@example.com"}])
+		self.assertEqual(len(frappe.sent_mail), 1)  # one message, which Frappe's queue sends to each address
+		mail = frappe.sent_mail[0]
+		self.assertEqual(mail.recipients, ["jane@example.com", "bob@example.com"])
+		self.assertIsNone(mail.get("expose_recipients"))  # Frappe's default: each sees only their own address
+		self.assertEqual(mail.subject, "Count stock")
+		self.assertEqual((mail.reference_doctype, mail.reference_name), ("CyveTech User Alert", "ALERT-1"))
+		self.assertEqual(mail.add_unsubscribe_link, 0)
+		self.assertEqual((mail.header, mail.x_priority), (["Count stock", "blue"], 3))
+		self.assertIn("<p>Before noon</p>", mail.message)
+		self.assertIn("Sent by Admin User", mail.message)
+		self.assertIn("https://erp.example.com/app/cyvetech-user-alert/ALERT-1", mail.message)
+		self.assertEqual(doc.emailed_to, 2)
+		# the in-app notifications are still there, and they send no email of their own
+		self.assertEqual(len([row for row in frappe.inserted if row["doctype"] == "Notification Log"]), 2)
+
+	def test_an_urgent_alert_is_flagged_and_its_header_is_red(self):
+		self.submitted(send_email=1, priority="Urgent", recipients=[{"user": "jane@example.com"}])
+		mail = frappe.sent_mail[0]
+		self.assertEqual((mail.header[1], mail.x_priority), ("red", 1))
+		self.assertIn(">Urgent</span>", mail.message)
+
+	def test_the_email_opens_the_document_the_alert_is_about(self):
+		self.submitted(send_email=1, recipients=[{"user": "jane@example.com"}], reference_doctype="Sales Order", reference_name="SO-1")
+		message = frappe.sent_mail[0].message
+		self.assertIn('href="https://erp.example.com/app/sales-order/SO-1"', message)
+		self.assertIn("Open Sales Order SO-1", message)
+
+	def test_with_email_it_too_unticked_no_email_is_sent(self):
+		doc = self.submitted(send_email=0, recipients=[{"user": "jane@example.com"}])
+		self.assertEqual(frappe.sent_mail, [])
+		self.assertIsNone(doc.emailed_to)
+
+	def test_a_user_without_a_valid_address_is_left_out_of_the_email(self):
+		doc = self.submitted(send_email=1, recipients=[{"user": "jane@example.com"}, {"user": "kiosk"}])
+		self.assertEqual(frappe.sent_mail[0].recipients, ["jane@example.com"])
+		self.assertEqual(doc.emailed_to, 1)
+
+	def test_an_email_that_cannot_be_sent_never_stops_the_alert(self):
+		frappe.fail_sendmail = True
+		doc = self.submitted(send_email=1, recipients=[{"user": "jane@example.com"}])
+		self.assertEqual(len([row for row in frappe.inserted if row["doctype"] == "Notification Log"]), 1)
+		self.assertEqual(doc.emailed_to, 0)
+		self.assertEqual(frappe.errors, ["CyveTech UI: alert ALERT-1 could not be emailed"])
 
 	def test_a_large_audience_is_delivered_in_the_background(self):
 		doc = self.alert(recipients=[{"user": f"u{i}@example.com"} for i in range(user_alert.BACKGROUND_FROM)])

@@ -7,9 +7,11 @@
  "field_order": [
   "subject",
   "priority",
+  "send_email",
   "column_break_status",
   "sent_on",
   "delivered_to",
+  "emailed_to",
   "section_message",
   "message",
   "section_recipients",
@@ -42,6 +44,13 @@
    "options": "Normal\nImportant\nUrgent"
   },
   {
+   "default": "1",
+   "description": "Also send it to each recipient's email address, one email each, from the site's outgoing email account.",
+   "fieldname": "send_email",
+   "fieldtype": "Check",
+   "label": "Email It Too"
+  },
+  {
    "fieldname": "column_break_status",
    "fieldtype": "Column Break"
   },
@@ -58,6 +67,15 @@
    "fieldname": "delivered_to",
    "fieldtype": "Int",
    "label": "Delivered To",
+   "no_copy": 1,
+   "read_only": 1
+  },
+  {
+   "depends_on": "eval:doc.docstatus == 1 && doc.send_email",
+   "description": "How many of them it was emailed to.",
+   "fieldname": "emailed_to",
+   "fieldtype": "Int",
+   "label": "Emailed To",
    "no_copy": 1,
    "read_only": 1
   },
@@ -129,7 +147,7 @@
  "index_web_pages_for_search": 1,
  "is_submittable": 1,
  "links": [],
- "modified": "2026-09-28 09:00:00.000000",
+ "modified": "2026-10-04 10:00:00.000000",
  "modified_by": "Administrator",
  "module": "CyveTech UI",
  "name": "CyveTech User Alert",

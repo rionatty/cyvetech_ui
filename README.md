@@ -15,7 +15,7 @@ Built for Frappe / ERPNext **v16**. It installs on v15 too, where everything exc
 | 3 | **Chart colors.** An eight-color palette for every chart on the desk, checked for color-blind readers. A single-series chart takes a color from its title, so charts side by side look different and each one keeps its color. Charts that choose their own colors on purpose (red for overdue) keep them. | Settings → Charts |
 | 4 | **Branded sign-in page.** One card with your logo, a heading and Frappe's own sign-in form, over a backdrop in your brand colors, or over a full-screen photo of your choice. | Settings → Sign-in Page |
 | 5 | **Navigation logo and browser icon.** Replace the ERPNext and Frappe logos (the "E") on the desktop's top bar, the loading screen, the app switcher and the sign-in page, put your mark at the top of the navigation pane, and set the browser-tab icon (favicon). Optionally rename "ERPNext" to your product name. | Settings → Branding |
-| 6 | **My Alerts.** A panel in the bottom-right corner showing each user's own open assignments ("overdue by 8 days"), notifications and alerts, most urgent first, straight from ERPNext's own records. Admins can also send an alert to specific users or roles with **CyveTech User Alert**. | Settings → Alerts, and CyveTech User Alert |
+| 6 | **My Alerts.** A panel in the bottom-right corner showing each user's own open assignments ("overdue by 8 days"), notifications and alerts, most urgent first, straight from ERPNext's own records. Admins can also send an alert to specific users or roles with **CyveTech User Alert**, by email too. | Settings → Alerts, and CyveTech User Alert |
 | 7 | **Desk modules.** Choose which tiles show on everyone's desktop: every module, listed under its app or folder. | Settings → Desk Modules |
 | 8 | **Pop-ups.** New notifications and alerts pop up the moment they arrive (within a minute if the site's realtime server is down). Alerts from ERPNext's own Notification rules and from CyveTech User Alert always pop up, and one that arrived while someone was away pops up the next time they open the desk. Sent alerts marked Important stay until closed; Urgent ones must be acknowledged. | Settings → Alerts |
 
@@ -54,15 +54,16 @@ Open **CyveTech UI Settings** from the search bar (System Managers only).
 
 Save once, and every user sees the change on their next page load.
 
-**ERPNext's own alerts:** any Notification rule (search "Notification") whose **Channel** is "System Notification", or that has **Send System Notification** ticked, shows in the bell and My Alerts and pops up with its message. With the default channel, Email, and the box unticked, it only sends an email.
+**ERPNext's own alerts:** any Notification rule (search "Notification") whose **Channel** is "System Notification", or that has **Send System Notification** ticked, shows in the bell and My Alerts and pops up with its message. For an email as well as the pop-up, set the **Channel** to Email and tick **Send System Notification**. A rule on the System Notification channel never sends an email: in Frappe v16 a rule's email comes only from its Email channel. With the default channel, Email, and the box unticked, it only sends an email.
 
-**Sending an alert:** create a **CyveTech User Alert**, pick the users and/or roles, choose a priority (Normal, Important, Urgent) and optionally link a document, then **Send**. Each recipient gets it in the bell menu and in My Alerts, as a pop-up. Recipients can only read alerts sent to them. Cancelling an alert withdraws it from everyone who hasn't read it yet.
+**Sending an alert:** create a **CyveTech User Alert**, pick the users and/or roles, choose a priority (Normal, Important, Urgent) and optionally link a document, then **Send**. Each recipient gets it in the bell menu and in My Alerts, as a pop-up, and with **Email It Too** ticked (the default) by email as well: one email each, so nobody sees who else got it. Recipients can only read alerts sent to them. Cancelling an alert withdraws it from everyone who hasn't read it yet.
 
 ---
 
 ### Good to know
 
 - **Colors apply in light mode.** Dark mode keeps Frappe's own dark colors.
+- **Emails need the site's outgoing email set up:** an Email Account with **Default Outgoing** ticked, and the scheduler running, which sends the Email Queue every minute. If an alert's email doesn't arrive, look in the **Email Queue** list for the reason.
 - **Pop-ups arrive instantly through Frappe's realtime (socket.io) server.** If it isn't running, nothing is lost: My Alerts checks every minute while the page is open, and straight away when someone comes back to the tab or moves to another page.
 - **Frappe's Getting Started checklist** opens in the same corner as My Alerts. While it's open, My Alerts moves over to sit beside it. On a phone, the checklist moves up above My Alerts instead.
 - **To check My Alerts in a browser**, open the console (F12) and run `cyvetech_ui.alerts_status()`. It shows the signed-in user, whether the panel is on the page, whether the realtime socket is connected, and when the list last loaded.

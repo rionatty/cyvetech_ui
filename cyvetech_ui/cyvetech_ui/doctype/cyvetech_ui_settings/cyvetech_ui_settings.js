@@ -14,7 +14,7 @@ frappe.ui.form.on("CyveTech UI Settings", {
 			frappe
 				.xcall("cyvetech_ui.cyvetech_ui.doctype.cyvetech_user_alert.cyvetech_user_alert.send_test_alert")
 				.then(() => {
-					frappe.show_alert({ message: __("Sent. It pops up in a moment."), indicator: "green" });
+					frappe.show_alert({ message: __("Sent. It pops up in a moment, and a copy goes to your email."), indicator: "green" });
 					// straight away, rather than waiting on the realtime event or the next poll
 					if (window.cyvetech_ui && cyvetech_ui.reload_alerts) cyvetech_ui.reload_alerts();
 				});

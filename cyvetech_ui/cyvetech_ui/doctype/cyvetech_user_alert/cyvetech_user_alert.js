@@ -22,12 +22,14 @@ frappe.ui.form.on("CyveTech User Alert", {
 			);
 		}
 		if (frm.doc.docstatus === 1 && manager) {
-			frm.set_intro(
-				__("Sent to {0} user(s). Cancelling withdraws it from anyone who has not read it yet.", [
-					frm.doc.delivered_to || 0,
-				]),
-				"blue"
+			const sent = [__("Sent to {0} user(s).", [frm.doc.delivered_to || 0])];
+			if (frm.doc.send_email) sent.push(__("Emailed to {0} of them.", [frm.doc.emailed_to || 0]));
+			sent.push(
+				frm.doc.send_email
+					? __("Cancelling takes it off the desk for anyone who has not read it yet; emails already sent stay sent.")
+					: __("Cancelling withdraws it from anyone who has not read it yet.")
 			);
+			frm.set_intro(sent.join(" "), "blue");
 		}
 	},
 });

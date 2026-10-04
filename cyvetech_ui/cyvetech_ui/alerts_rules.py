@@ -22,6 +22,7 @@ by hand, and it would be odd for it to sit below a task due in a week.
 """
 
 import datetime
+from html import escape
 
 OVERDUE, TODAY, SOON, LATER, NONE = "overdue", "today", "soon", "later", "none"
 # most urgent first: the order rows are sorted in and the badge is colored by
@@ -139,3 +140,43 @@ def _date(value):
 	if isinstance(value, datetime.date):
 		return value
 	return datetime.date.fromisoformat(str(value)[:10])
+
+
+# ── An alert by email (cyvetech_user_alert.py) ────────────────────────────────
+
+# Frappe's email header takes an indicator color.
+EMAIL_INDICATOR = {"Normal": "blue", "Important": "orange", "Urgent": "red"}
+# A pill above the message for the alerts that are more than Normal: text, background.
+EMAIL_PILL = {"Important": ("#9a3412", "#ffedd5"), "Urgent": ("#991b1b", "#fee2e2")}
+
+
+def email_x_priority(priority):
+	"""The X-Priority header: mail clients flag 1 as high importance."""
+	return 1 if priority in EMAIL_PILL else 3
+
+
+def email_body(message_html, priority, priority_label, link, link_label, footer, button="#16335e"):
+	"""The email's HTML, which Frappe sets inside its own email layout.
+
+	The message is the alert's Text Editor content, which Frappe cleaned when
+	it was saved, and goes in as it is; every other piece is plain text and is
+	escaped here. `button` must be a hex color (the caller checks it).
+	"""
+	parts = []
+	pill = EMAIL_PILL.get(priority)
+	if pill and priority_label:
+		parts.append(
+			'<p style="margin: 0 0 16px;"><span style="display: inline-block; padding: 3px 10px; '
+			f"border-radius: 999px; background: {pill[1]}; color: {pill[0]}; font-size: 12px; "
+			f'font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase;">{escape(priority_label)}</span></p>'
+		)
+	parts.append(f'<div style="font-size: 14px; line-height: 1.6;">{message_html or ""}</div>')
+	if link:
+		parts.append(
+			f'<p style="margin: 24px 0 0;"><a href="{escape(link)}" style="display: inline-block; '
+			f"padding: 10px 18px; border-radius: 8px; background: {button}; color: #ffffff; "
+			f'font-weight: 600; text-decoration: none;">{escape(link_label)}</a></p>'
+		)
+	if footer:
+		parts.append(f'<p style="margin: 24px 0 0; color: #64748b; font-size: 12px;">{escape(footer)}</p>')
+	return "\n".join(parts)

@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>module page tests</title>
+<!--
+	The module pages (cyvetech_ui_module_pages.js and cyvetech_ui_home.css) on a
+	mock of a Frappe v16 workspace. Each case runs module_pages_frame.html in a
+	frame of its own, because the script reads its settings once, as the desk loads.
+-->
+<script src="harness.js"></script>
+<style>
+	body { font: 13px system-ui; margin: 16px; }
+	iframe { display: block; margin-bottom: 12px; border: 1px solid #ddd; }
+</style>
+</head>
+<body>
+<div id="results"></div>
+<script>
+	const CASES = ["main", "off", "hrms", "fail"];
+
+	(async function () {
+		for (const name of CASES) {
+			const frame = document.createElement("iframe");
+			const swaps = location.search ? "&" + location.search.slice(1) : "";
+			frame.src = `module_pages_frame.html?case=${name}${swaps}`;
+			frame.width = 1280;
+			frame.height = 700;
+			document.body.appendChild(frame);
+			await new Promise((resolve) => {
+				const started = Date.now();
+				const wait = () => {
+					if (frame.contentWindow && frame.contentWindow.test_summary) return resolve();
+					if (Date.now() - started > 12000) {
+						window.results.push({ label: `${name}: finished`, ok: false, got: "did not finish" });
+						return resolve();
+					}
+					setTimeout(wait, 50);
+				};
+				wait();
+			});
+			((frame.contentWindow && frame.contentWindow.results) || []).forEach((r) => window.results.push(r));
+		}
+		report();
+	})();
+</script>
+</body>
+</html>

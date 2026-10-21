@@ -1,8 +1,8 @@
 ### CyveTech UI
 
-Branding, theme, desk modules, and user alerts for the Frappe / ERPNext desk, all managed from one settings page: **CyveTech UI Settings**.
+Branding, theme, a desk home for ERPNext, module pages, desk modules, and user alerts for the Frappe / ERPNext desk, all managed from one settings page: **CyveTech UI Settings**.
 
-Built for Frappe / ERPNext **v16**. It installs on v15 too, where everything except the desk-module tiles works (v15 has no desktop tiles).
+Built for Frappe / ERPNext **v16**. It installs on v15 too, where everything works except the desk home, the module pages and the desk-module tiles, which are built on v16's desk.
 
 ---
 
@@ -18,6 +18,9 @@ Built for Frappe / ERPNext **v16**. It installs on v15 too, where everything exc
 | 6 | **My Alerts.** A panel in the bottom-right corner showing each user's own open assignments ("overdue by 8 days"), notifications and alerts, most urgent first, straight from ERPNext's own records. Admins can also send an alert to specific users or roles with **CyveTech User Alert**, by email too. | Settings → Alerts, and CyveTech User Alert |
 | 7 | **Desk modules.** Choose which tiles show on everyone's desktop: every module, listed under its app or folder. | Settings → Desk Modules |
 | 8 | **Pop-ups.** New notifications and alerts pop up the moment they arrive (within a minute if the site's realtime server is down). Alerts from ERPNext's own Notification rules and from CyveTech User Alert always pop up, and one that arrived while someone was away pops up the next time they open the desk. Sent alerts marked Important stay until closed; Urgent ones must be acknowledged. | Settings → Alerts |
+| 9 | **Desk home for ERPNext.** The desk opens on a home: a greeting, the day's figures (sales this month against last month, what customers owe and what the company owes, cash and bank, stock value, orders to deliver), what waits for each user, what needs attention in the business (overdue invoices, late orders and deliveries, bills due this week, stock below zero, late work orders and tasks), and the panels behind the figures: six months of sales and collections, receivables aging, top customers, orders to deliver, purchases to receive, stock to reorder, and each user's own unfinished drafts. A button makes the document the user makes most, and the pages they open most are a click away. Each user sees the figures of what their roles are about, and only what they may read. The modules run down the left in the order work flows through ERPNext, each opening to its own menu. | Settings → Home |
+| 10 | **Module pages.** Each module (Selling, Buying, Stock, Invoicing...) opens under a header in the home's look: its picture, the groups of its menu, what needs attention in it, its step in the flow from lead to cash, what waits for the user there, and a button for the document they make most there. ERPNext's own figures, charts and cards follow, restyled to match. | Settings → Home |
+| 11 | **Grouped menus and every color a setting.** The sidebar's groups (Selling's POS, Setup, Reports) read as headings with their entries under a guide line. The header, the accent and the status colors (overdue, due today, done) are settings, used by the home, the module pages and My Alerts alike. | Settings → Desk Theme |
 
 ---
 
@@ -51,6 +54,7 @@ Open **CyveTech UI Settings** from the search bar (System Managers only).
 3. **Sign-in Page:** leave the sign-in logo blank to reuse the navigation logo. The background photo is optional: use a photo at least 1600 px wide. A smaller picture, or the logo itself, isn't used, because stretched across the screen it would look blurry.
 4. **Desk Modules:** click **Load Desk Modules**, untick what should not show, and save. Every tile is listed, each module under its group: an app (such as ERPNext) or a folder (such as Accounting). A hidden group doesn't hide its modules: Frappe shows them on the desk one by one instead, which is how ERPNext ships, with its own tile hidden. So when you untick a group, you're asked whether to take its modules off the desk too.
 5. **Alerts:** click **Send Me a Test Alert** to see a pop-up and the My Alerts panel working end to end.
+6. **Home:** the desk home and the module pages are on from the start. Untick any panel that shouldn't show on anyone's home. The header and status colors are under **Desk Theme**: keep the header dark, since white text goes on it (the page warns when a color is too light).
 
 Save once, and every user sees the change on their next page load.
 
@@ -63,25 +67,29 @@ Save once, and every user sees the change on their next page load.
 ### Good to know
 
 - **Colors apply in light mode.** Dark mode keeps Frappe's own dark colors.
+- **Whose figures the home shows.** Each user's home follows what their roles are about: Accounts users see sales, what is owed both ways and the cash; Sales users their orders and quotations; Purchase users what is on its way; Stock users the stock value and what to reorder; Manufacturing, Projects and Support users their own. Someone with several roles gets them all, the money first. A user with none of these gets what waits for them and their drafts. Every figure is read with the user's own permissions, so User Permissions narrow it the way they narrow the lists: a sales clerk limited to one territory sees that territory's orders.
+- **Money on the home is the user's default company's**, in its currency. Invoices owed in another currency are converted at today's rate from Currency Exchange.
+- **The home's figures are kept for five minutes** per user, so a desk that's opened often doesn't query the database every time. **Refresh**, under the figures, reads them again on the spot.
+- **The desk can always be edited as before.** While someone edits the desktop, the home steps aside and the tiles are Frappe's own again. Any part of the home that can't be read is left out and written to the Error Log; the desk itself always opens.
 - **Emails need the site's outgoing email set up:** an Email Account with **Default Outgoing** ticked, and the scheduler running, which sends the Email Queue every minute. If an alert's email doesn't arrive, look in the **Email Queue** list for the reason.
 - **Pop-ups arrive instantly through Frappe's realtime (socket.io) server.** If it isn't running, nothing is lost: My Alerts checks every minute while the page is open, and straight away when someone comes back to the tab or moves to another page.
 - **Frappe's Getting Started checklist** opens in the same corner as My Alerts. While it's open, My Alerts moves over to sit beside it. On a phone, the checklist moves up above My Alerts instead.
 - **To check My Alerts in a browser**, open the console (F12) and run `cyvetech_ui.alerts_status()`. It shows the signed-in user, whether the panel is on the page, whether the realtime socket is connected, and when the list last loaded.
 - **Hiding a module changes what shows, not who may open it.** Use roles and Module Profiles for access. Users who have rearranged their own desktop keep their layout, and hidden modules are hidden for them too.
 - **Blank logo fields leave your current logos alone.** Clearing a logo here removes only what this app put in Website Settings and Navbar Settings. A logo set there by hand is never touched.
-- **With Stock Addon or HRMS Addon installed:** both ship their own navy theme. CyveTech UI's colors take over theirs, as long as **Use Custom Colours** in *Stock Addon Theme Settings* / *HRMS Addon Theme Settings* is switched off. Its theme also keeps Frappe's white panels (the bell's notifications list and the Getting Started checklist) readable beside theirs. HRMS Addon also has its own My Alerts panel and sign-in page. Use one or the other: switch off **Show the My Alerts Panel** here, or remove HRMS Addon's. The sign-in page shown is the one from whichever app was installed last.
+- **With Stock Addon or HRMS Addon installed:** both ship their own navy theme. CyveTech UI's colors take over theirs, as long as **Use Custom Colours** in *Stock Addon Theme Settings* / *HRMS Addon Theme Settings* is switched off. Its theme also keeps Frappe's white panels (the bell's notifications list and the Getting Started checklist) readable beside theirs. HRMS Addon also has its own My Alerts panel and sign-in page. Use one or the other: switch off **Show the My Alerts Panel** here, or remove HRMS Addon's. The sign-in page shown is the one from whichever app was installed last. HRMS Addon also has its own HR desk home and module pages: where those are on, CyveTech UI's step aside, so a site has one home, not two.
 
 ---
 
 ### Development
 
-The Python tests run without a bench. They cover the rules behind the colors, alerts, sign-in page and desk modules, and the server code, which runs against a small in-memory stand-in for Frappe (`tests/fake_frappe.py`):
+The Python tests run without a bench. They cover the rules behind the colors, alerts, sign-in page, desk modules and the desk home, and the server code, which runs against a small in-memory stand-in for Frappe (`tests/fake_frappe.py`). The home's tests put a small ERPNext company in it, and check what each kind of user is shown and that nothing they may not read is ever asked for:
 
 ```bash
 python -m unittest discover -s tests -v
 ```
 
-The desk scripts and stylesheets are tested in a real browser, against a mock of the v16 desk. The mock includes Stock Addon's and HRMS Addon's theme rules, so the tests also prove this app's colors and corners win over them. A layout test checks where My Alerts sits beside Frappe's Getting Started checklist at desktop and phone widths, and the sign-in tests run against Frappe's own sign-in markup and styles. Serve the repository with the browser's cache switched off, so every run loads the files as they are on disk:
+The desk scripts and stylesheets are tested in a real browser, against a mock of the v16 desk. The mock includes Stock Addon's and HRMS Addon's theme rules, so the tests also prove this app's colors and corners win over them. A layout test checks where My Alerts sits beside Frappe's Getting Started checklist at desktop and phone widths, and the sign-in tests run against Frappe's own sign-in markup and styles. The home and module page tests run on mocks of v16's desk page and of a workspace, with Frappe's own desktop styles: every figure, panel and click, the modules down the left, editing the desk, a call that fails, and a phone's width. Serve the repository with the browser's cache switched off, so every run loads the files as they are on disk:
 
 ```bash
 python tests/browser/serve.py

@@ -17,14 +17,22 @@ straight off the document, for two reasons:
 
 import frappe
 
+from cyvetech_ui.cyvetech_ui import home_rules
+
 DOCTYPE = "CyveTech UI Settings"
 
-# CyveTech's navy and gold, with a soft neutral page.
+# CyveTech's navy and gold, with a soft neutral page. The status colors each
+# carry white text at 5:1 or better, as the count badges in My Alerts need.
 THEME_DEFAULTS = {
 	"sidebar": "#16335E",
 	"sidebar_text": "",  # blank: worked out from the sidebar color
 	"highlight": "#EAA51A",
 	"page": "#F4F6FA",
+	"header": "",  # blank: the sidebar color
+	"accent": "#2F64B0",
+	"danger": "#C53030",
+	"warning": "#B45309",
+	"success": "#1E7A46",
 }
 
 # The chart palette, validated for color-vision deficiency and separation on
@@ -49,6 +57,15 @@ DEFAULTS = {
 	"color_top_bar": 1,
 	"rounded_tiles": 1,
 	"tile_radius": 16,
+	# The home and the module pages, and the status colors they share with My Alerts
+	"header_color": THEME_DEFAULTS["header"],
+	"accent_color": THEME_DEFAULTS["accent"],
+	"danger_color": THEME_DEFAULTS["danger"],
+	"warning_color": THEME_DEFAULTS["warning"],
+	"success_color": THEME_DEFAULTS["success"],
+	"home_enabled": 1,
+	"module_pages_enabled": 1,
+	**{switch: 1 for switch in home_rules.SWITCHES},
 	# Charts
 	"apply_chart_colors": 1,
 	"vary_single_series": 1,
@@ -83,6 +100,9 @@ CHECKS = {
 	"alerts_panel",
 	"popup_notifications",
 	"popup_sound",
+	"home_enabled",
+	"module_pages_enabled",
+	*home_rules.SWITCHES,
 }
 INTS = {"tile_radius", "popup_seconds"}
 
@@ -128,6 +148,32 @@ def _truthy(value):
 
 def chart_colors(settings):
 	return [settings.get(f"chart_color_{i}") for i in range(1, len(CHART_PALETTE) + 1)]
+
+
+def ensure_defaults():
+	"""after_migrate: write the default of every setting that has never been saved.
+
+	Frappe fills a Single's defaults only while nothing at all is saved for it.
+	Once something is, a field added by an update reads blank, and a checkbox
+	unticked, on the settings page, so the next save would switch a new feature
+	off without anyone choosing to. What someone saved is left alone. Never
+	fails a deploy.
+	"""
+	try:
+		if not frappe.db.exists("DocType", DOCTYPE):
+			return []
+		stored = frappe.db.get_singles_dict(DOCTYPE) or {}
+		if not stored:
+			return []  # never saved at all: Frappe shows the defaults itself
+		written = []
+		for key, value in DEFAULTS.items():
+			if stored.get(key) is None:
+				frappe.db.set_single_value(DOCTYPE, key, value)
+				written.append(key)
+		return written
+	except Exception:
+		frappe.log_error(title="CyveTech UI: settings defaults")
+		return []
 
 
 @frappe.whitelist()

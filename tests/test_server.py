@@ -114,11 +114,12 @@ class DeskModules(Base):
 	def setUp(self):
 		super().setUp()
 		frappe.doctypes = {"Desktop Icon"}
+		# idx is where each tile sits on the desktop, which is the order they are listed in
 		frappe.tables["Desktop Icon"] = [
-			{"name": "Selling", "label": "Selling", "app": "erpnext", "icon_type": "App", "hidden": 0, "standard": 1, "owner": "Administrator"},
-			{"name": "Quality", "label": "Quality", "app": "erpnext", "icon_type": "App", "hidden": 0, "standard": 1, "owner": "Administrator"},
-			{"name": "Leaves", "label": "Leaves", "app": "hrms", "icon_type": "Link", "hidden": 0, "standard": 1, "parent_icon": "Frappe HR", "owner": "Administrator"},
-			{"name": "My Shortcut", "label": "My Shortcut", "app": "", "icon_type": "Link", "hidden": 0, "standard": 0, "owner": "jane@example.com"},
+			{"name": "Selling", "label": "Selling", "app": "erpnext", "icon_type": "App", "hidden": 0, "standard": 1, "owner": "Administrator", "idx": 1},
+			{"name": "Quality", "label": "Quality", "app": "erpnext", "icon_type": "App", "hidden": 0, "standard": 1, "owner": "Administrator", "idx": 2},
+			{"name": "Leaves", "label": "Leaves", "app": "hrms", "icon_type": "Link", "hidden": 0, "standard": 1, "parent_icon": "Frappe HR", "owner": "Administrator", "idx": 4},
+			{"name": "My Shortcut", "label": "My Shortcut", "app": "", "icon_type": "Link", "hidden": 0, "standard": 0, "owner": "jane@example.com", "idx": 5},
 		]
 
 	def rows(self, *pairs):
@@ -129,7 +130,7 @@ class DeskModules(Base):
 
 	def test_the_table_lists_every_shared_tile_each_under_its_group(self):
 		frappe.tables["Desktop Icon"].append(
-			{"name": "Frappe HR", "label": "Frappe HR", "app": "hrms", "icon_type": "App", "hidden": 0, "standard": 1, "owner": "Administrator"}
+			{"name": "Frappe HR", "label": "Frappe HR", "app": "hrms", "icon_type": "App", "hidden": 0, "standard": 1, "owner": "Administrator", "idx": 3}
 		)
 		doc = settings_controller.CyveTechUISettings({"desk_modules": []})
 		desk_modules.refresh_rows(doc)

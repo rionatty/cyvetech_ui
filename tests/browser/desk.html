@@ -182,6 +182,11 @@
 			<div class="sidebar-item-container"><a class="item-anchor" id="plain-item" href="#"><svg class="icon"><use></use></svg> Quotation</a></div>
 			<div class="sidebar-item-container active-sidebar selected" id="active"><a class="item-anchor" id="active-item" href="#">Sales Order</a></div>
 			<div class="sidebar-item-container"><a class="item-anchor" href="#">Sales Invoice</a></div>
+			<!-- a group of the menu: a Section Break drawn with indent 1, and its entries (ui/sidebar/sidebar_item.html) -->
+			<div class="sidebar-item-container section-item" id="group">
+				<div class="standard-sidebar-item indent" id="group-heading"><a class="item-anchor"><span class="sidebar-item-label" id="group-label">Reports</span></a></div>
+				<div class="nested-container" id="group-items"><div class="sidebar-item-container"><a class="item-anchor" href="#">Sales Analytics</a></div></div>
+			</div>
 		</div>
 		<div class="future-card" id="future-card">A card of Frappe's, beside the sidebar</div>
 		<div class="user-onboarding">
@@ -265,6 +270,15 @@ try {
 
 	sidebar("plain v16");
 	panels("plain v16");
+	check("a group's heading is a small capital caption", css("#group-label", "text-transform") === "uppercase" && css("#group-label", "font-size") === "11px",
+		[css("#group-label", "text-transform"), css("#group-label", "font-size")]);
+	check("in the sidebar's quieter shade", css("#group-label", "color") === "rgb(185, 194, 207)", css("#group-label", "color"));
+	check("set apart from the group above", css("#group-heading", "margin-top") === "10px", css("#group-heading", "margin-top"));
+	check("its entries hang off a hairline in the sidebar's line color",
+		css("#group-items", "border-left-color") === "rgb(52, 80, 122)" && css("#group-items", "margin-left") === "18px",
+		[css("#group-items", "border-left-color"), css("#group-items", "margin-left")]);
+	check("the home's colors are on the page for the home to use", getComputedStyle(root).getPropertyValue("--cvt-band-good").trim() === "#1e7a46",
+		getComputedStyle(root).getPropertyValue("--cvt-band-good"));
 	check("the sidebar's colors stop at the sidebar: a card beside it in its container keeps dark text",
 		css("#future-card", "color") === "rgb(56, 56, 56)", css("#future-card", "color"));
 	check("sidebar icons are stroked in the text color", css("#plain-item .icon", "stroke") === WHITE, css("#plain-item .icon", "stroke"));
@@ -334,6 +348,7 @@ try {
 	root.setAttribute("data-theme", "dark");
 	check("dark mode: the sidebar is left to Frappe", css(".body-sidebar", "background-color") !== NAVY, css(".body-sidebar", "background-color"));
 	check("dark mode: tiles stay rounded", css("#number", "border-top-left-radius") === "16px", css("#number", "border-top-left-radius"));
+	check("dark mode: the menu's groups are left to Frappe", css("#group-label", "text-transform") === "none", css("#group-label", "text-transform"));
 	root.setAttribute("data-theme", "light");
 
 	// switching the theme off takes every trace away

@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>home tests</title>
+<!--
+	The desk home (cyvetech_ui_home.js and cyvetech_ui_home.css) on a mock of
+	Frappe v16's desk. Each case runs home_frame.html in a frame of its own,
+	because the home's script reads its settings once, as the desk loads, and
+	because a page cannot change the width of its own window.
+-->
+<script src="harness.js"></script>
+<style>
+	body { font: 13px system-ui; margin: 16px; }
+	iframe { display: block; margin-bottom: 12px; border: 1px solid #ddd; }
+</style>
+</head>
+<body>
+<div id="results"></div>
+<script>
+	const CASES = [
+		{ name: "main", width: 1280, height: 900 },
+		{ name: "off", width: 1280, height: 600 },
+		{ name: "hrms", width: 1280, height: 600 },
+		{ name: "fail", width: 1280, height: 600 },
+		{ name: "phone", width: 390, height: 800 },
+	];
+
+	(async function () {
+		for (const one of CASES) {
+			const frame = document.createElement("iframe");
+			const swaps = location.search ? "&" + location.search.slice(1) : ""; // the same files, or the swapped ones
+			frame.src = `home_frame.html?case=${one.name}${swaps}`;
+			frame.width = one.width;
+			frame.height = one.height;
+			document.body.appendChild(frame);
+			await new Promise((resolve) => {
+				const started = Date.now();
+				const wait = () => {
+					if (frame.contentWindow && frame.contentWindow.test_summary) return resolve();
+					if (Date.now() - started > 12000) {
+						window.results.push({ label: `${one.name}: finished`, ok: false, got: "did not finish" });
+						return resolve();
+					}
+					setTimeout(wait, 50);
+				};
+				wait();
+			});
+			((frame.contentWindow && frame.contentWindow.results) || []).forEach((r) => window.results.push(r));
+		}
+		report();
+	})();
+</script>
+</body>
+</html>

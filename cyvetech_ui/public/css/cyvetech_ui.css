@@ -43,12 +43,22 @@
 	--cvt-page-text: #111827;
 	--cvt-tile-radius: 16px;
 
-	/* How urgent an alert is, as a color. Each carries white text at 4.5:1 or more. */
+	/* The desk home's and the module pages' header, and the accent
+	   (cyvetech_ui_home.css). The header is the sidebar color unless one is picked. */
+	--cvt-header: #16335e;
+	--cvt-header-deep: #0e213d;
+	--cvt-header-mid: #20477f;
+	--cvt-on-header: #ffffff;
+	--cvt-accent: #2f64b0;
+	--cvt-line: #d5dbe4;
+
+	/* How urgent something is, as a color. Each carries white text at 4.5:1 or more. */
 	--cvt-band-overdue: #c53030;
 	--cvt-band-today: #b45309;
 	--cvt-band-soon: #2f64b0;
 	--cvt-band-later: #475569;
 	--cvt-band-none: #64748b;
+	--cvt-band-good: #1e7a46;
 }
 
 /* ── Sidebar ─────────────────────────────────────────────────────────────── */
@@ -98,6 +108,36 @@ html.cvt-theme:not([data-theme="dark"]) .body-sidebar-container :is(.active-side
 html.cvt-theme:not([data-theme="dark"]) .desk-sidebar :is(.standard-sidebar-item.selected, .sidebar-item-container.selected) :is(*, .icon use):not(#cvt) {
 	color: var(--cvt-highlight-text) !important;
 	stroke: var(--cvt-highlight-text) !important;
+}
+
+/* ── The menu's groups ────────────────────────────────────────────────────────
+ * ERPNext's menus come in groups (Selling: POS, Items & Pricing, Setup,
+ * Reports): each a Section Break drawn with indent 1, which v16 renders as
+ * .section-item > .standard-sidebar-item.indent, its entries in the
+ * .nested-container that follows (ui/sidebar/sidebar_item.html). Each heading
+ * is a small capital caption, set apart from the group above, and the entries
+ * under it hang off a hairline guide: the look of HRMS Addon's grouped menus. */
+
+html.cvt-theme:not([data-theme="dark"]) .body-sidebar .section-item > .standard-sidebar-item.indent {
+	margin-top: 10px;
+}
+
+html.cvt-theme:not([data-theme="dark"]) .body-sidebar .section-item > .standard-sidebar-item.indent .sidebar-item-label {
+	color: var(--cvt-sidebar-muted);
+	font-size: 11px;
+	font-weight: 600;
+	letter-spacing: 0.06em;
+	text-transform: uppercase;
+}
+
+html.cvt-theme:not([data-theme="dark"]) .body-sidebar .section-item > .standard-sidebar-item.indent {
+	--icon-stroke: var(--cvt-sidebar-muted);
+}
+
+html.cvt-theme:not([data-theme="dark"]) .body-sidebar .indent + .nested-container {
+	margin-left: 18px;
+	padding-left: 6px;
+	border-left: 1px solid var(--cvt-sidebar-border);
 }
 
 /* ── Frappe's white panels in the sidebar's container ────────────────────────
@@ -469,6 +509,9 @@ html:has(.cvt-alerts) .main-section {
 }
 .cvt-band-none {
 	--cvt-band: var(--cvt-band-none);
+}
+.cvt-band-good {
+	--cvt-band: var(--cvt-band-good);
 }
 
 .cvt-alert.cvt-band-overdue,

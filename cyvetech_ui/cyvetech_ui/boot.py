@@ -14,7 +14,7 @@ It must never raise: a failure here would stop the desk from loading.
 import frappe
 
 from cyvetech_ui import __version__
-from cyvetech_ui.cyvetech_ui import branding, color_rules, desk_modules
+from cyvetech_ui.cyvetech_ui import branding, color_rules, desk_modules, home_rules, module_pages_rules
 from cyvetech_ui.cyvetech_ui.settings import (
 	CHART_PALETTE,
 	CHART_PALETTE_DARK,
@@ -64,10 +64,30 @@ def payload(settings, hidden_modules):
 					"sidebar_text": settings.sidebar_text_color,
 					"highlight": settings.highlight_color,
 					"page": settings.page_color,
+					"header": settings.header_color,
+					"accent": settings.accent_color,
+					"danger": settings.danger_color,
+					"warning": settings.warning_color,
+					"success": settings.success_color,
 				},
 				THEME_DEFAULTS,
 				settings.tile_radius,
 			),
+		},
+		# the desk home (cyvetech_ui_home.js, home.py) and the modules down the
+		# left of it, in their order: with the boot, so the tiles are never seen
+		# in another order first
+		"home": {
+			"enabled": settings.home_enabled,
+			"modules": list(home_rules.MODULES),
+		},
+		# each module's page in the home's look (cyvetech_ui_module_pages.js,
+		# module_pages.py), the flow it shows a module's place in, and where each
+		# module's work usually starts
+		"module_pages": {
+			"enabled": settings.module_pages_enabled,
+			"flow": list(home_rules.FLOW),
+			"actions": dict(module_pages_rules.ACTIONS),
 		},
 		"charts": {
 			"enabled": settings.apply_chart_colors,

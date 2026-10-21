@@ -1,0 +1,284 @@
+<!doctype html>
+<html lang="en" dir="ltr" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>module page tests: one case</title>
+<!--
+	Opened by module_pages.html, once for each case (?case=main, off, hrms, fail):
+	the app's real module page script and stylesheets on a mock of a Frappe v16
+	workspace with ERPNext's kinds of blocks, and a stand-in for the server.
+-->
+<style>
+	*, *::before, *::after { box-sizing: border-box; }
+	:root { --text-color: #383838; --text-muted: #525252; --card-bg: #ffffff; --border-color: #ededed; --bg-color: #ffffff; }
+	html, body { margin: 0; font: 13px system-ui; background: var(--bg-color); }
+	/* the parts of Frappe's workspace styles the page is drawn over (desk/workspace.scss) */
+	.widget { border-radius: 12px; background: var(--card-bg); border: 1px solid var(--border-color); padding: 12px; margin: 8px 0; }
+	.widget.spacer { height: 1px; background: var(--card-bg); border: 0; }
+	.widget-title { display: flex; align-items: center; font-weight: 600; }
+	.link-item { display: block; padding: 4px; color: #0b5cad; }
+	.ce-header { font-size: 14px; }
+</style>
+<script src="harness.js"></script>
+<script>load_app_file("/cyvetech_ui/public/css/cyvetech_ui.css")</script>
+<script>load_app_file("/cyvetech_ui/public/css/cyvetech_ui_home.css")</script>
+<script>
+	window.CASE = new URLSearchParams(location.search).get("case") || "main";
+	const FLOW = ["CRM", "Selling", "Buying", "Stock", "Manufacturing", "Accounting"];
+
+	window.handlers = {};
+	window.$ = function (target) {
+		if (typeof target === "function") {
+			if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", () => target());
+			else setTimeout(target);
+			return;
+		}
+		return {
+			on(event, fn) {
+				(window.handlers[event] = window.handlers[event] || []).push(fn);
+			},
+		};
+	};
+	window.trigger = (event) => (window.handlers[event] || []).forEach((fn) => fn({ type: event }));
+
+	const link = (label, link_to, link_type = "DocType") => ({ type: "Link", label, link_to, link_type });
+	const section = (label) => ({ type: "Section Break", label });
+	window.frappe = make_frappe({
+		cyvetech_ui: {
+			theme: {
+				enabled: 1, rounded: 1,
+				vars: {
+					"--cvt-header": "#3a1f5d", "--cvt-header-deep": "#25143c", "--cvt-header-mid": "#2f3f86", "--cvt-on-header": "#ffffff",
+					"--cvt-highlight": "#eaa51a", "--cvt-highlight-text": "#111827", "--cvt-accent": "#2f64b0", "--cvt-line": "#d5dbe4",
+					"--cvt-band-overdue": "#b00020", "--cvt-band-today": "#9a5b00", "--cvt-band-soon": "#2f64b0", "--cvt-band-good": "#1e7a46",
+					"--cvt-page-bg": "#f4f6fa", "--cvt-tile-radius": "16px",
+				},
+			},
+			module_pages: {
+				enabled: CASE === "off" ? 0 : 1,
+				flow: FLOW,
+				actions: { Selling: "Sales Order", Invoicing: "Sales Invoice", Projects: "Task" },
+			},
+		},
+		hrms_addon_module_pages: CASE === "hrms" ? 1 : 0,
+		workspace_sidebar_item: {
+			crm: { items: [link("Lead", "Lead")] },
+			selling: { items: [link("Home", "Selling", "Workspace"), link("Quotation", "Quotation"), section("POS"), link("POS Profile", "POS Profile"),
+				section("Nothing Under It"), section("Setup"), link("Customer", "Customer")] },
+			buying: { items: [link("Home", "Buying", "Workspace"), link("Purchase Order", "Purchase Order")] },
+			invoicing: { items: [link("Home", "Invoicing", "Workspace"), section("Receivables"), link("Sales Invoice", "Sales Invoice")] },
+			projects: { items: [link("Home", "Projects", "Workspace"), link("Task", "Task")] },
+		},
+		desktop_icons: [
+			{ label: "Accounting", icon_type: "Folder", hidden: 0 },
+			{ label: "Invoicing", parent_icon: "Accounting", hidden: 0, app: "erpnext" },
+			{ label: "Selling", parent_icon: "ERPNext", hidden: 0, app: "erpnext" },
+			{ label: "Buying", parent_icon: "ERPNext", hidden: 0, app: "erpnext" },
+			{ label: "Projects", parent_icon: "ERPNext", hidden: 0, app: "erpnext" },
+		],
+	});
+	frappe.workspaces = { selling: { public: 1 }, buying: { public: 1 }, invoicing: { public: 1 }, projects: { public: 1 } };
+	frappe.workspace = { _page: { name: "Selling", title: "Selling", icon: "sell" } };
+	frappe.get_route = () => ["Workspaces", frappe.workspace._page.name];
+	frappe.routes = [];
+	frappe.set_route = (...route) => {
+		frappe.routes.push({ route: route.length === 1 ? route[0] : route, options: frappe.route_options });
+		frappe.route_options = null;
+	};
+	frappe.made = [];
+	frappe.new_doc = (doctype) => frappe.made.push(doctype);
+	frappe.model = { can_create: (doctype) => doctype !== "Task" };
+	frappe.router = {
+		slug: (name) => String(name).toLowerCase().replace(/ /g, "-"),
+		is_app_route: (path) => path.startsWith("/desk") || path.startsWith("/app"),
+	};
+	frappe.utils.generate_route = (args) => "/desk/" + frappe.router.slug(args.name);
+	frappe.utils.get_desktop_icon = (name, variant) =>
+		["Selling", "Invoicing", "Buying"].includes(name) ? `/assets/erpnext/icons/desktop_icons/${variant}/${name.toLowerCase()}.svg` : false;
+	frappe.utils.icon = (name) => `<svg class="icon" data-name="${name}"></svg>`;
+
+	window.calls = [];
+	window.waiting_calls = [];
+	window.fetch = (url) => {
+		calls.push(url);
+		return new Promise((resolve) => waiting_calls.push({ url, resolve }));
+	};
+	window.answer = (workspace, message, ok = true) => {
+		const at = waiting_calls.findIndex((call) => call.url.endsWith("?workspace=" + encodeURIComponent(workspace)));
+		if (at < 0) throw new Error("nothing asked for " + workspace);
+		const call = waiting_calls.splice(at, 1)[0];
+		call.resolve({ ok, json: () => Promise.resolve({ message }) });
+	};
+</script>
+<script>load_app_file("/cyvetech_ui/public/js/cyvetech_ui_desk.js")</script>
+<script>load_app_file("/cyvetech_ui/public/js/cyvetech_ui_module_pages.js")</script>
+</head>
+<body>
+<div class="main-section">
+	<div class="page-container" data-page-route="Workspaces" id="page">
+		<div class="page-head" id="head"><div class="page-head-content">Selling</div></div>
+		<div class="layout-main-section" id="body">
+			<div class="codex-editor">
+				<div class="ce-block"><div class="ce-block__content"><div class="ce-header" id="heading"><span class="h4">Reports &amp; Masters</span></div></div></div>
+				<div class="widget number-widget-box" id="number"><div class="widget-head"><div class="widget-title">Total Sales Amount</div></div>
+					<div class="widget-content"><div class="number" id="number-figure">UGX 12M</div></div></div>
+				<div class="widget links-widget-box" id="links"><div class="widget-head"><div class="widget-title" id="links-title">Selling</div></div>
+					<div class="widget-body"><a class="link-item" id="link-item" href="#"><span class="link-content">Quotation</span></a></div></div>
+				<div class="widget dashboard-widget-box" id="chart"><div class="widget-head"><div class="widget-title">Sales Order Trends</div></div></div>
+				<div class="widget spacer" id="spacer"></div>
+			</div>
+		</div>
+	</div>
+</div>
+<script>
+	const SELLING = {
+		workspace: "Selling",
+		waiting: {
+			tasks: 2, overdue: 1, today: 0, unread: 1,
+			items: [{ title: "Approve SO-1", doctype: "Sales Order", docname: "SO-1", when: "overdue by 1 day", band: "overdue" }],
+			notes: [{ title: "Quotation won", doctype: "Quotation", docname: "QTN-7", when: "", band: "none" }],
+		},
+		doctypes: ["Sales Order", "Quotation"],
+		attention: [
+			{ key: "orders_late", label: "Sales order late to deliver", value: 1, band: "overdue", route: ["List", "Sales Order"],
+				filters: { docstatus: 1, status: ["in", ["To Deliver and Bill", "To Deliver"]], delivery_date: ["<", "2026-10-22"] } },
+			{ key: "quotations_expiring", label: "Quotations expiring this week", value: 4, band: "soon", route: ["List", "Quotation"], filters: { docstatus: 1 } },
+		],
+		action: "Quotation",
+	};
+
+	const tick = () => new Promise((resolve) => setTimeout(resolve, 0));
+	const settle = async () => { for (let i = 0; i < 6; i += 1) await tick(); };
+	const pause = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+	const $q = (selector) => document.querySelector(selector);
+	const $all = (selector) => Array.from(document.querySelectorAll(selector));
+	const text = (selector) => ($q(selector) ? $q(selector).textContent.replace(/\s+/g, " ").trim() : "(no element)");
+	const click = (element) => element.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true }));
+	const last_route = () => frappe.routes[frappe.routes.length - 1];
+	const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
+	const HEADER = "rgb(58, 31, 93)", LINE = "rgb(213, 219, 228)", GOLD = "rgb(234, 165, 26)";
+
+	async function main_case() {
+		await pause(60);
+		check("the module pages' look is switched on at once", document.documentElement.classList.contains("cvt-mod-on"), document.documentElement.className);
+		check("a header goes first in the workspace's body", $q("#body > .cvt-mod") === $q("#body").firstElementChild, $q("#body").firstElementChild.className);
+		check("and shows first, above Frappe's blocks", css("#body > .cvt-mod", "order") === "-1" && css("#body", "display") === "flex", css("#body > .cvt-mod", "order"));
+		check("the module's name", text(".cvt-mod-hero h2") === "Selling", text(".cvt-mod-hero h2"));
+		check("the groups of its menu, a heading with nothing under it left out", text(".cvt-mod-hero p") === "POS · Setup", text(".cvt-mod-hero p"));
+		check("while what waits is on its way, a frame", $q(".cvt-mod-chip.cvt-mod-asking"), "no frame");
+		check("its usual document to make, until the server says what this user makes there", text(".cvt-mod-action") === "New Sales Order", text(".cvt-mod-action"));
+		const glyph = $q(".cvt-mod-glyph > i");
+		check("its picture: the app's light picture as a mask, drawn in the theme's colors",
+			glyph && glyph.style.getPropertyValue("--cvt-m-glyph").includes("/assets/erpnext/icons/desktop_icons/subtle/selling.svg") &&
+			css(".cvt-mod-glyph", "background-color") === HEADER, glyph && glyph.getAttribute("style"));
+
+		const steps = $all(".cvt-mod-step");
+		check("its place in the flow from a lead to the money", steps.length === 6 && steps[1].classList.contains("cvt-now") && steps[1].getAttribute("aria-current") === "step",
+			steps.map((step) => step.className));
+		check("said in words", text(".cvt-mod-stage") === "Step 2 of 6, lead to cash", text(".cvt-mod-stage"));
+		check("each step the user may open is a button, the others are not",
+			same(steps.map((step) => step.tagName), ["BUTTON", "SPAN", "BUTTON", "SPAN", "SPAN", "BUTTON"]), steps.map((step) => step.tagName));
+		check("the nearest step either side, by name", same($all(".cvt-mod-near").map((near) => near.textContent), ["CRM", "Buying"]), $all(".cvt-mod-near").map((near) => near.textContent));
+
+		answer("Selling", SELLING);
+		await settle();
+		check("what waits for the user in the module", text(".cvt-mod-chip b") === "2", text(".cvt-mod-chip"));
+		check("what the user makes most there, once the server says", text(".cvt-mod-action") === "New Quotation", text(".cvt-mod-action"));
+		const flags = $all(".cvt-mod-flag");
+		check("what needs attention in it, each counted", same(flags.map((flag) => flag.textContent.trim()), ["1Sales order late to deliver", "4Quotations expiring this week"]),
+			flags.map((flag) => flag.textContent));
+		check("each count in its status color", css(".cvt-mod-flag.cvt-band-overdue b", "background-color") === "rgb(176, 0, 32)", css(".cvt-mod-flag b", "background-color"));
+		check("the panel of what waits, under the header", text(".cvt-mod-panel h3") === "Waiting for You" && text(".cvt-mod-panel .cvt-mod-row-title") === "Approve SO-1", text(".cvt-mod-panel"));
+		check("the header in the header color picked", css(".cvt-mod-hero", "background-image").includes(HEADER), css(".cvt-mod-hero", "background-image"));
+		check("the button the highlight", css(".cvt-mod-action", "background-color") === GOLD, css(".cvt-mod-action", "background-color"));
+
+		// ERPNext's own blocks, as the home draws its panels
+		check("a card of links: a hairline in the line color", css("#links", "border-top-color") === LINE, css("#links", "border-top-color"));
+		check("with a picture on the header color beside its title", css("#links-title", "background-color", "::before") === HEADER, css("#links-title", "background-color", "::before"));
+		check("its links as rows", css("#link-item", "display") === "flex" && css("#link-item", "border-top-left-radius") === "10px", css("#link-item", "display"));
+		check("a figure's band across its top in the header color", css("#number", "box-shadow").includes(HEADER), css("#number", "box-shadow"));
+		check("a heading marked in the highlight", css("#heading", "background-color", "::before") === GOLD, css("#heading", "background-color", "::before"));
+		check("a spacer leaves no stray line", css("#spacer", "background-color") === "rgba(0, 0, 0, 0)", css("#spacer", "background-color"));
+		check("the canvas is the page color", css("#page", "background-color") === "rgb(244, 246, 250)", css("#page", "background-color"));
+
+		// what each opens
+		click(flags[0]);
+		check("a count opens its list on what it counts", same(last_route(), { route: ["List", "Sales Order"], options: SELLING.attention[0].filters }), last_route());
+		click($q(".cvt-mod-action"));
+		check("the button makes a new one", same(frappe.made, ["Quotation"]), frappe.made);
+		click($all(".cvt-mod-near")[1]);
+		check("the next step opens as its tile would, with its own menu", same(last_route(), { route: "/desk/buying", options: { sidebar: "Buying" } }), last_route());
+		click($all(".cvt-mod-tab")[1]);
+		check("the Notifications tab", text(".cvt-mod-panel .cvt-mod-row-title") === "Quotation won", text(".cvt-mod-panel"));
+		click($q(".cvt-mod-panel .cvt-mod-row"));
+		check("a row opens its document", same(last_route().route, ["Form", "Quotation", "QTN-7"]), last_route());
+		click($q(".cvt-mod-chip"));
+		check("what waits shows its list", text(".cvt-mod-panel .cvt-mod-tab.cvt-on") === "To Do2", text(".cvt-mod-panel .cvt-mod-tab.cvt-on"));
+		click($q(".cvt-mod-all"));
+		check("See all opens the user's own list, kept to the module's documents",
+			same(last_route(), { route: ["List", "ToDo"], options: { allocated_to: "jane@example.com", status: "Open", reference_type: ["in", ["Sales Order", "Quotation"]] } }),
+			last_route());
+
+		// the workspace is edited: Frappe's own page
+		$q("#body").classList.add("edit-mode");
+		check("while it is edited the header is out of the way", css("#body > .cvt-mod", "display") === "none", css("#body > .cvt-mod", "display"));
+		check("and the blocks are Frappe's own", css("#links", "border-top-color") === "rgb(237, 237, 237)", css("#links", "border-top-color"));
+		$q("#body").classList.remove("edit-mode");
+
+		// another module, inside a folder
+		frappe.workspace._page = { name: "Invoicing", title: "Invoicing" };
+		trigger("page-change");
+		await pause(60);
+		check("another module gets its own header", text(".cvt-mod-hero h2") === "Invoicing", text(".cvt-mod-hero h2"));
+		check("a module in a folder takes the folder's step", text(".cvt-mod-stage") === "Step 6 of 6, lead to cash" &&
+			$all(".cvt-mod-step")[5].classList.contains("cvt-now"), text(".cvt-mod-stage"));
+		check("and asks after its own documents", calls[calls.length - 1].endsWith("?workspace=Invoicing"), calls[calls.length - 1]);
+		answer("Invoicing", { workspace: "Invoicing", waiting: { tasks: 0, unread: 0, items: [], notes: [] }, doctypes: [], attention: [], action: null });
+		await settle();
+		check("nothing waiting: no panel", !$q(".cvt-mod-panel"), "a panel");
+		check("its usual document", text(".cvt-mod-action") === "New Sales Invoice", text(".cvt-mod-action"));
+
+		// a module outside the flow
+		frappe.workspace._page = { name: "Projects", title: "Projects", icon: "project" };
+		trigger("page-change");
+		await pause(60);
+		check("a module outside the flow has no place in it", text(".cvt-mod-hero h2") === "Projects" && !$q(".cvt-mod-track"), text(".cvt-mod-hero"));
+		check("and with no picture of its own, its icon", $q(".cvt-mod-drawn svg[data-name='project']"), $q(".cvt-mod-picture") && $q(".cvt-mod-picture").outerHTML);
+		check("a document the user may not make is not offered", !$q(".cvt-mod-action"), text(".cvt-mod-hero-side"));
+	}
+
+	async function off_case() {
+		await pause(60);
+		check("switched off in the settings: no look of its own", !document.documentElement.classList.contains("cvt-mod-on") && !$q(".cvt-mod"), document.documentElement.className);
+		check("and Frappe's blocks as Frappe drew them", css("#links", "border-top-color") === "rgb(237, 237, 237)", css("#links", "border-top-color"));
+		check("nothing is asked of the server", calls.length === 0, calls);
+	}
+
+	async function hrms_case() {
+		await pause(60);
+		check("beside HRMS Addon's own module pages: this stands aside", !document.documentElement.classList.contains("cvt-mod-on") && !$q(".cvt-mod") && calls.length === 0, calls);
+	}
+
+	async function fail_case() {
+		await pause(60);
+		answer("Selling", null, false);
+		await settle();
+		check("a call that fails leaves the header", text(".cvt-mod-hero h2") === "Selling", text(".cvt-mod"));
+		check("without a frame waiting forever", !$q(".cvt-mod-asking") && !$q(".cvt-mod-flag"), text(".cvt-mod-hero-side"));
+		check("and the module's usual document", text(".cvt-mod-action") === "New Sales Order", text(".cvt-mod-action"));
+		check("the page itself is untouched", $q("#number-figure").textContent === "UGX 12M", $q("#number-figure").textContent);
+	}
+
+	(async function () {
+		start_desk();
+		const cases = { main: main_case, off: off_case, hrms: hrms_case, fail: fail_case };
+		await cases[CASE]();
+		report();
+	})().catch((error) => {
+		check(`${CASE}: the test ran to the end`, false, String((error && error.stack) || error));
+		report();
+	});
+</script>
+</body>
+</html>

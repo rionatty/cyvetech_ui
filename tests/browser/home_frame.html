@@ -1,0 +1,501 @@
+<!doctype html>
+<html lang="en" dir="ltr" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>home tests: one case</title>
+<!--
+	Opened by home.html, once for each case (?case=main, off, hrms, fail, phone):
+	the app's real home script and stylesheets on a mock of Frappe v16's desk
+	page, whose own rules are copied below (desk/page/desktop/desktop.css), and a
+	stand-in for the server's two answers that the test hands over when it chooses.
+-->
+<style>
+	*, *::before, *::after { box-sizing: border-box; }
+	:root {
+		--text-color: #383838; --text-muted: #525252; --card-bg: #ffffff; --border-color: #ededed; --bg-color: #ffffff;
+		--desktop-icon-dimension: 44px; --desktop-navbar-height: 52px;
+	}
+	html, body { margin: 0; font: 13px system-ui; background: var(--bg-color); }
+	.main-section { height: 100vh; overflow-y: auto; }
+	.page-body { padding: 0 15px; }
+	.desktop-navbar { height: 52px; position: sticky; top: 0; z-index: 3; background: #fff; border-bottom: 1px solid var(--border-color); }
+	/* desk/page/desktop/desktop.css */
+	.desktop-wrapper { max-width: 100%; width: 100%; margin-right: auto; margin-left: auto; padding: 0; }
+	.desktop-container { display: flex; align-items: center; justify-content: center; flex-direction: row; }
+	.desktop-container .icons-container { display: flex; flex-direction: column; gap: 10px; }
+	.icons-container { margin-top: 60px; padding: 20px; }
+	.icons { gap: 16px; display: grid; justify-items: center; grid-template-columns: repeat(6, 1fr); grid-template-rows: repeat(3, 1fr); }
+	.desktop-icon { display: flex; height: 126px; width: 127px; flex-direction: column; align-items: center; gap: 12px; padding: 13px 16px 12px 16px; position: relative; }
+	.icon-container { padding: 10px; border-radius: 16px; overflow: hidden; display: flex; align-items: center; justify-content: center; width: var(--desktop-icon-dimension); height: var(--desktop-icon-dimension); background: #2f64b0; }
+	.icon-caption { text-align: center; text-wrap: nowrap; display: flex; justify-content: space-between; height: 35px; flex-direction: column; width: 100%; }
+	.icon-title { font-weight: 600; font-size: 14px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+	.hide-button { display: none; }
+</style>
+<script src="harness.js"></script>
+<script>load_app_file("/cyvetech_ui/public/css/cyvetech_ui.css")</script>
+<script>load_app_file("/cyvetech_ui/public/css/cyvetech_ui_home.css")</script>
+<script>
+	window.CASE = new URLSearchParams(location.search).get("case") || "main";
+	const MODULES = ["CRM", "Selling", "Buying", "Stock", "Manufacturing", "Subcontracting", "Accounting", "Projects",
+		"Assets", "Quality", "Support", "Organization", "ERPNext Settings"];
+
+	// jQuery as far as the app's scripts use it: what runs when the page is ready, and the desk's events
+	window.handlers = {};
+	window.$ = function (target) {
+		if (typeof target === "function") {
+			if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", () => target());
+			else setTimeout(target);
+			return;
+		}
+		return {
+			on(event, fn) {
+				(window.handlers[event] = window.handlers[event] || []).push(fn);
+			},
+		};
+	};
+	window.trigger = (event) => (window.handlers[event] || []).forEach((fn) => fn({ type: event }));
+
+	const link = (label, link_to, link_type = "DocType") => ({ type: "Link", label, link_to, link_type });
+	const section = (label) => ({ type: "Section Break", label });
+	window.frappe = make_frappe({
+		cyvetech_ui: {
+			theme: {
+				enabled: 1, top_bar: 1, rounded: 1,
+				// a header and status colors picked in the settings: the home must draw with these
+				vars: {
+					"--cvt-header": "#3a1f5d", "--cvt-header-deep": "#25143c", "--cvt-header-mid": "#2f3f86",
+					"--cvt-on-header": "#ffffff", "--cvt-highlight": "#eaa51a", "--cvt-highlight-text": "#111827",
+					"--cvt-accent": "#2f64b0", "--cvt-line": "#d5dbe4", "--cvt-band-overdue": "#b00020",
+					"--cvt-band-today": "#9a5b00", "--cvt-band-soon": "#2f64b0", "--cvt-band-good": "#1e7a46",
+					"--cvt-page-bg": "#f4f6fa", "--cvt-tile-radius": "16px",
+				},
+			},
+			home: { enabled: CASE === "off" ? 0 : 1, modules: MODULES },
+		},
+		hrms_addon_home: CASE === "hrms" ? 1 : 0,
+		workspace_sidebar_item: {
+			selling: { items: [link("Home", "Selling", "Workspace"), link("Quotation", "Quotation"), link("Sales Order", "Sales Order"),
+				section("POS"), link("POS Profile", "POS Profile"), section("Empty Heading"), section("Reports"),
+				Object.assign(link("Sales Analytics", "Sales Analytics", "Report"), { report: { report_type: "Script Report", ref_doctype: "Sales Order" } })] },
+			stock: { items: [link("Stock Entry", "Stock Entry")] },
+			invoicing: { items: [link("Home", "Invoicing", "Workspace"), link("Sales Invoice", "Sales Invoice")] },
+			payments: { items: [link("Payment Entry", "Payment Entry")] },
+		},
+		desktop_icons: [
+			{ label: "Accounting", icon_type: "Folder", hidden: 0 },
+			{ label: "Invoicing", parent_icon: "Accounting", hidden: 0 },
+			{ label: "Payments", parent_icon: "Accounting", hidden: 0 },
+			{ label: "Budget", parent_icon: "Accounting", hidden: 1 },
+			{ label: "Selling", parent_icon: "ERPNext", hidden: 0 },
+			{ label: "Stock", parent_icon: "ERPNext", hidden: 0 },
+		],
+		frequently_visited_links: [
+			{ route: "List/Sales Invoice/List", count: 30 },
+			{ route: "Form/Sales Invoice/SINV-0001", count: 20 },
+			{ route: "query-report/Accounts Receivable", count: 9 },
+			{ route: "List/Sales Invoice/Report", count: 5 },
+			{ route: "point-of-sale", count: 3 },
+		],
+	});
+	frappe.workspaces = { selling: { public: 1 }, invoicing: { public: 1 } };
+	frappe.get_route = () => ["desktop"];
+	frappe.routes = [];
+	frappe.set_route = (...route) => {
+		frappe.routes.push({ route: route.length === 1 ? route[0] : route, options: frappe.route_options });
+		frappe.route_options = null;
+	};
+	frappe.made = [];
+	frappe.new_doc = (doctype) => frappe.made.push(doctype);
+	frappe.model = { can_create: (doctype) => doctype !== "Journal Entry" };
+	frappe.router = {
+		slug: (name) => String(name).toLowerCase().replace(/ /g, "-"),
+		is_app_route: (path) => path.startsWith("/desk") || path.startsWith("/app"),
+	};
+	frappe.utils.to_title_case = (text) => String(text).replace(/\b\w/g, (c) => c.toUpperCase());
+	frappe.utils.get_filter_as_json = (filters) => JSON.stringify(filters);
+	frappe.utils.generate_route = (args) => {
+		const base = args.type === "Report" ? "/desk/query-report/" + args.name : "/desk/" + frappe.router.slug(args.name);
+		const options = args.route_options ? "?" + new URLSearchParams(args.route_options).toString() : "";
+		return base + options;
+	};
+
+	// the server, answering only when the test says so
+	window.calls = [];
+	window.waiting_calls = [];
+	window.fetch = (url) => {
+		calls.push(url);
+		return new Promise((resolve) => waiting_calls.push({ url, resolve }));
+	};
+	window.answer = (part, message, ok = true) => {
+		const at = waiting_calls.findIndex((call) => call.url.includes("home." + part));
+		if (at < 0) throw new Error("nothing asked for " + part);
+		const call = waiting_calls.splice(at, 1)[0];
+		call.resolve({ ok, json: () => Promise.resolve({ message }) });
+	};
+</script>
+<script>load_app_file("/cyvetech_ui/public/js/cyvetech_ui_desk.js")</script>
+<script>load_app_file("/cyvetech_ui/public/js/cyvetech_ui_home.js")</script>
+</head>
+<body>
+<div class="main-section" id="pane">
+	<div class="page-container" data-page-route="desktop">
+		<div class="page-body" id="page-body"></div>
+	</div>
+</div>
+<script>
+	const DESK = `
+		<div class="desktop-wrapper">
+			<header class="desktop-navbar navbar"><div class="navbar-home"><img id="brand-logo" alt=""></div></header>
+			<div class="desktop-container">
+				<div class="icons-container">
+					<div class="icons">
+						${["Framework", "Stock", "Accounting", "Selling", "Organization", "My Workspaces"]
+							.map((label) => `<a class="desktop-icon" data-id="${label}" id="tile-${label.replace(/ /g, "-")}" style="text-decoration:none">` +
+								`<div class="icon-container${label === "Accounting" ? " folder-icon" : ""}"></div>` +
+								`<div class="icon-caption"><div class="icon-title">${label}</div></div>` +
+								`<div class="hide-button" data-mode="hide">x</div></a>`)
+							.join("")}
+					</div>
+				</div>
+			</div>
+			<div class="edit-mode-buttons"></div>
+		</div>`;
+	document.getElementById("page-body").innerHTML = DESK;
+
+	const SUMMARY = {
+		greeting: "Good afternoon", first_name: "Jane <b>bold</b>", today: "2026-10-22", company: "Acme Ltd", currency: "UGX",
+		waiting: {
+			tasks: 3, overdue: 1, today: 1, unread: 2,
+			items: [
+				{ title: "Approve SO-1", doctype: "Sales Order", docname: "SO-1", when: "overdue by 1 day", band: "overdue" },
+				{ title: "Call the bank", doctype: "ToDo", docname: "T-9", when: "due today", band: "today" },
+			],
+			notes: [{ title: "Payment received", doctype: "Payment Entry", docname: "PE-1", when: "", band: "none" }],
+		},
+		desks: ["finance", "sales"],
+		cards: ["sales", "receivable", "payable", "cash"].map((key) => ({ key, label: key + " label", kind: key === "cash" ? "money" : "money", frame: 1 })),
+		panels: [
+			{ key: "attention", title: "Needs Attention", place: "beside" },
+			{ key: "trend", title: "Sales and Collections", place: "wide" },
+			{ key: "aging", title: "Receivables Aging", place: "grid" },
+			{ key: "customers", title: "Top Customers This Month", place: "grid" },
+			{ key: "deliver", title: "Orders to Deliver", place: "grid" },
+			{ key: "drafts", title: "Your Drafts", place: "grid" },
+		],
+		create: ["Payment Entry", "Sales Invoice", "Journal Entry", "Quotation"],
+		links: [
+			{ label: "Accounts Receivable", route: ["query-report", "Accounts Receivable"] },
+			{ label: "General Ledger", route: ["query-report", "General Ledger"] },
+		],
+	};
+	SUMMARY.cards[0].label = "Sales This Month";
+	const ACME = { company: "Acme Ltd" };
+	const MONTHS = [["2026-05-01", "2026-05-31", 900, 400], ["2026-06-01", "2026-06-30", 1200, 1000], ["2026-07-01", "2026-07-31", 600, 700],
+		["2026-08-01", "2026-08-31", 1500, 900], ["2026-09-01", "2026-09-30", 3000, 1200], ["2026-10-01", "2026-10-22", 1400, 600]];
+	const FIGURES = {
+		at: "2026-10-22 15:30:00", currency: "UGX",
+		cards: [
+			{ key: "sales", label: "Sales This Month", kind: "money", value: 1400000, note: "Against the same days last month", tone: "blue",
+				change: { percent: 75, direction: "up" }, route: ["List", "Sales Invoice"],
+				filters: { docstatus: 1, company: "Acme Ltd", posting_date: ["between", ["2026-10-01", "2026-10-22"]] } },
+			{ key: "receivable", label: "To Collect", kind: "money", value: 8200000, note: { money: 7700000, words: "overdue" }, tone: "rose",
+				route: ["query-report", "Accounts Receivable"], options: ACME },
+			// To Pay could not be read: it is left out
+			{ key: "cash", label: "Cash and Bank", kind: "money", value: 4250, note: "In 2 accounts", tone: "green",
+				route: ["query-report", "General Ledger"], options: { company: "Acme Ltd", account: ["Cash - AL", "Stanbic - AL"] } },
+		],
+		panels: [
+			{ key: "attention", title: "Needs Attention", kind: "attention", rows: [
+				{ key: "invoices_overdue", label: "Sales invoices overdue", value: 2, band: "overdue", route: ["List", "Sales Invoice"],
+					filters: { docstatus: 1, outstanding_amount: [">", 0], due_date: ["<", "2026-10-22"], company: "Acme Ltd" } },
+				{ key: "bills_due", label: "Supplier bill due this week", value: 1, band: "today", route: ["List", "Purchase Invoice"],
+					filters: { docstatus: 1 } },
+			] },
+			{ key: "trend", title: "Sales and Collections", kind: "columns", note: "Last 6 months, before tax",
+				series: [{ key: "billed", label: "Billed", band: "soon" }, { key: "collected", label: "Collected", band: "good" }],
+				months: MONTHS.map(([from, to, billed, collected]) => ({ label: "", from, to, values: [billed, collected] })),
+				route: ["List", "Sales Invoice"], day: "posting_date", filters: { docstatus: 1, company: "Acme Ltd" } },
+			{ key: "aging", title: "Receivables Aging", kind: "aging", note: "Owed by customers, by days overdue",
+				buckets: [
+					{ key: "current", label: "Not due yet", value: 500, band: "good", filters: { due_date: [">=", "2026-10-22"] } },
+					{ key: "d30", label: "1 to 30 days", value: 300, band: "soon", filters: { due_date: ["between", ["2026-09-22", "2026-10-21"]] } },
+					{ key: "d60", label: "31 to 60 days", value: 0, band: "today", filters: {} },
+					{ key: "d90", label: "61 to 90 days", value: 0, band: "overdue", filters: {} },
+					{ key: "older", label: "Over 90 days", value: 7400, band: "overdue", filters: { due_date: ["<=", "2026-07-23"] } },
+				],
+				rows: [{ title: "Gamma", doctype: "Customer", docname: "C3", value: 7400, when: "oldest 114 days overdue", band: "overdue" }],
+				route: ["List", "Sales Invoice"], filters: { docstatus: 1, outstanding_amount: [">", 0], company: "Acme Ltd" } },
+			// Top Customers could not be read: it is left out
+			{ key: "deliver", title: "Orders to Deliver", kind: "list", total: 9, route: ["List", "Sales Order"],
+				filters: { docstatus: 1, status: ["in", ["To Deliver and Bill", "To Deliver"]] }, empty: "Every order is delivered", progress: "delivered",
+				rows: [
+					{ title: "Alpha", doctype: "Sales Order", docname: "SO-1", when: "overdue by 2 days", band: "overdue", value: 2360, progress: 0 },
+					{ title: "Beta", doctype: "Sales Order", docname: "SO-2", when: "due in 8 days", band: "later", value: 1180, progress: 50 },
+				] },
+			{ key: "drafts", title: "Your Drafts", kind: "list", rows: [], total: 0, note: "From the last 60 days", empty: "No drafts left open" },
+		],
+	};
+
+	const tick = () => new Promise((resolve) => setTimeout(resolve, 0));
+	const settle = async () => { for (let i = 0; i < 6; i += 1) await tick(); };
+	const $q = (selector) => document.querySelector(selector);
+	const $all = (selector) => Array.from(document.querySelectorAll(selector));
+	const text = (selector) => ($q(selector) ? $q(selector).textContent.replace(/\s+/g, " ").trim() : "(no element)");
+	const click = (element) => element.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true }));
+	const last_route = () => frappe.routes[frappe.routes.length - 1];
+	const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
+	const GOLD = "rgb(234, 165, 26)";
+
+	async function main_case() {
+		await settle();
+		check("the home goes inside Frappe's desk page, before its tiles",
+			$q(".desktop-wrapper > .cvt-home") && $q(".cvt-home").nextElementSibling === $q(".desktop-container"), $q(".desktop-wrapper").innerHTML.slice(0, 120));
+		check("the desk is marked as having it", $q(".desktop-wrapper").classList.contains("cvt-has-home"), $q(".desktop-wrapper").className);
+		check("while the summary is on its way, a skeleton", $all(".cvt-home .cvt-home-bone").length > 4, $all(".cvt-home .cvt-home-bone").length);
+		check("the summary is asked for once", calls.filter((url) => url.includes("home.summary")).length === 1, calls);
+		check("the figures wait for the summary", !calls.some((url) => url.includes("home.figures")), calls);
+
+		answer("summary", SUMMARY);
+		await settle();
+		check("the greeting, with the name escaped", text(".cvt-home-hero h2") === "Good afternoon, Jane <b>bold</b>" && !$q(".cvt-home-hero h2 b"), text(".cvt-home-hero h2"));
+		check("the date and the company under it", text(".cvt-home-hero p").includes("Acme Ltd") && text(".cvt-home-hero p").includes("22"), text(".cvt-home-hero p"));
+		check("what waits for the user beside it", text(".cvt-home-chip b") === "3" && text(".cvt-home-chip small") === "Waiting for you", text(".cvt-home-chip"));
+		check("the document the user makes most, one click away", text(".cvt-home-action") === "New Payment Entry", text(".cvt-home-action"));
+		check("the business figures are frames until they are read",
+			$all(".cvt-home-card.cvt-home-frame").length === 4 && !$q(".cvt-home-card-value"), $all(".cvt-home-card").length);
+		check("a frame says what it is", text('.cvt-home-frame[data-key="sales"] .cvt-home-card-label') === "Sales This Month", text('.cvt-home-frame[data-key="sales"]'));
+		const shortcuts = $all(".cvt-home-shortcut").map((chip) => chip.textContent.trim());
+		check("under them, what the user makes next most, never what they may not make",
+			same(shortcuts.slice(0, 2), ["Sales Invoice", "Quotation"]), shortcuts);
+		check("and the pages they open most, once each, never a form, then their desk's usual",
+			same(shortcuts.slice(2), ["Sales Invoice", "Accounts Receivable", "Point Of Sale", "General Ledger"]), shortcuts);
+		check("what waits for the user, in a panel of its own",
+			text(".cvt-home-waiting .cvt-home-row-title") === "Approve SO-1" && $all(".cvt-home-waiting .cvt-home-row").length === 2, text(".cvt-home-waiting"));
+		check("its tabs count each list", same($all(".cvt-home-tab").map((tab) => tab.textContent), ["To Do3", "Notifications2"]), $all(".cvt-home-tab").map((tab) => tab.textContent));
+		check("Needs Attention beside it, a frame for now", $q('.cvt-home-panels > [data-panel="attention"] .cvt-home-bone'), text(".cvt-home-panels"));
+		check("the trend across the page, a frame for now", $q('.cvt-home-wide[data-panel="trend"] .cvt-home-bone'), "no frame");
+		check("the rest in the grid", $all(".cvt-home-grid > .cvt-home-panel").length === 4, $all(".cvt-home-grid > .cvt-home-panel").length);
+		check("the figures are asked for once the home is drawn", calls.filter((url) => url.includes("home.figures")).length === 1, calls);
+
+		answer("figures", FIGURES);
+		await settle();
+		const values = $all(".cvt-home-card-value").map((value) => value.textContent);
+		check("a figure that could not be read is left out", same($all(".cvt-home-card").map((card) => card.getAttribute("data-key")), ["sales", "receivable", "cash"]),
+			$all(".cvt-home-card").map((card) => card.getAttribute("data-key")));
+		check("money in the company's currency, shortened", same(values, ["UGX 1.4M", "UGX 8.2M", "UGX 4.3K"]), values);
+		check("in full when pointed at", ($q('[data-key="sales"] .cvt-home-card-value').getAttribute("title") || "").includes("1,400,000"),
+			$q('[data-key="sales"] .cvt-home-card-value').getAttribute("title"));
+		check("how it moved against last month", text('[data-key="sales"] .cvt-home-delta') === "75%" && $q('[data-key="sales"] .cvt-home-delta-up'),
+			text('[data-key="sales"] .cvt-home-card-note'));
+		check("an amount in the note, in the currency", text('[data-key="receivable"] .cvt-home-card-note') === "UGX 7.7M overdue", text('[data-key="receivable"] .cvt-home-card-note'));
+		check("each figure's band in its status color", css('[data-key="cash"]', "background-color", "::before") === "rgb(30, 122, 70)" &&
+			css('[data-key="receivable"]', "background-color", "::before") === "rgb(176, 0, 32)",
+			[css('[data-key="cash"]', "background-color", "::before"), css('[data-key="receivable"]', "background-color", "::before")]);
+
+		const attention = $all('[data-panel="attention"] .cvt-home-row');
+		check("what needs attention: each count and what it counts", same(attention.map((row) => row.textContent.trim()), ["2Sales invoices overdue", "1Supplier bill due this week"]),
+			attention.map((row) => row.textContent.trim()));
+		check("a count in its status color, with white text that reads on it",
+			css('[data-panel="attention"] .cvt-home-count.cvt-band-overdue', "background-color") === "rgb(176, 0, 32)" &&
+			contrast(css('[data-panel="attention"] .cvt-home-count', "color"), css('[data-panel="attention"] .cvt-home-count', "background-color")) >= 4.5,
+			css('[data-panel="attention"] .cvt-home-count', "background-color"));
+
+		const columns = $all('[data-panel="trend"] .cvt-home-column');
+		check("six months of columns", columns.length === 6, columns.length);
+		const heights = columns.map((column) => Array.from(column.querySelectorAll("i")).map((bar) => bar.style.height));
+		check("each as tall as its share of the largest", same(heights[4], ["100%", "40%"]) && same(heights[0], ["30%", "13%"]), heights);
+		check("each month named in the reader's language", columns[0].querySelector(".cvt-home-column-label").textContent ===
+			new Date(2026, 4, 1).toLocaleDateString(undefined, { month: "short" }), columns[0].textContent);
+		check("this month's figures in the legend", text('[data-panel="trend"] .cvt-home-legend').includes("Billed UGX 1.4K") &&
+			text('[data-panel="trend"] .cvt-home-legend').includes("Collected UGX 600"), text('[data-panel="trend"] .cvt-home-legend'));
+
+		const split = $all('[data-panel="aging"] .cvt-home-split > i').map((part) => part.style.width);
+		check("the aging: the whole owed split by how overdue, only where there is some", same(split, ["6.1%", "3.66%", "90.24%"]), split);
+		const older = $q('[data-panel="aging"] .cvt-home-bucket:last-child');
+		check("each part listed with its share", $all('[data-panel="aging"] .cvt-home-bucket').length === 5 &&
+			same([older.querySelector(".cvt-home-bar-label").textContent, older.querySelector("b").textContent, older.querySelector("small").textContent],
+				["Over 90 days", "UGX 7.4K", "90%"]), older.textContent);
+		check("then who owes the most past due", text('[data-panel="aging"] .cvt-home-row-title') === "Gamma", text('[data-panel="aging"]'));
+
+		check("a panel that could not be read is left out", !$q('[data-panel="customers"]'), "still there");
+		check("so the grid is three across", $q(".cvt-home-grid").classList.contains("cvt-home-three"), $q(".cvt-home-grid").className);
+		const orders = $all('[data-panel="deliver"] .cvt-home-row-meta').map((meta) => meta.textContent);
+		check("an order's progress once it is under way", orders[1].includes("50% delivered") && !orders[0].includes("delivered"), orders);
+		check("the way to the whole list where only some is shown", text('[data-panel="deliver"] .cvt-home-all') === "See all 9", text('[data-panel="deliver"]'));
+		check("an empty panel says so quietly", text('[data-panel="drafts"] .cvt-home-empty') === "No drafts left open", text('[data-panel="drafts"]'));
+		check("when the figures were read, and a way to read them again", text(".cvt-home-stamp").startsWith("Figures as of") && $q(".cvt-home-refresh"), text(".cvt-home-stamp"));
+
+		// the colors are the settings', not the stylesheet's
+		check("the header is the header color picked", css(".cvt-home-hero", "background-image").includes("rgb(58, 31, 93)"), css(".cvt-home-hero", "background-image"));
+		check("its text reads on it", contrast(css(".cvt-home-hero h2", "color"), "rgb(58, 31, 93)") >= 4.5, css(".cvt-home-hero h2", "color"));
+		check("the button beside the greeting is the highlight", css(".cvt-home-action", "background-color") === GOLD, css(".cvt-home-action", "background-color"));
+		check("a panel's picture sits on the header color", css(".cvt-home-panel-icon", "background-color") === "rgb(58, 31, 93)", css(".cvt-home-panel-icon", "background-color"));
+
+		// what each opens
+		click($q('[data-key="sales"]'));
+		check("a figure opens its list on its own filters", same(last_route(), { route: ["List", "Sales Invoice"], options: FIGURES.cards[0].filters }), last_route());
+		click($q('[data-key="receivable"]'));
+		check("or its report for the company", same(last_route(), { route: ["query-report", "Accounts Receivable"], options: ACME }), last_route());
+		click($q(".cvt-home-chip"));
+		check("what waits opens the user's own to-do list", same(last_route(), { route: ["List", "ToDo"], options: { allocated_to: "jane@example.com", status: "Open" } }), last_route());
+		click($q(".cvt-home-action"));
+		check("the button makes a new one", same(frappe.made, ["Payment Entry"]), frappe.made);
+		click($all(".cvt-home-shortcut")[1]);
+		check("so does each document under the figures", same(frappe.made, ["Payment Entry", "Quotation"]), frappe.made);
+		click($all(".cvt-home-shortcut")[3]);
+		check("a page opened most opens as Frappe recorded it", same(last_route(), { route: "query-report/Accounts Receivable", options: null }), last_route());
+		click(attention[0]);
+		check("what needs attention opens its list on what it counts", same(last_route(), { route: ["List", "Sales Invoice"], options: FIGURES.panels[0].rows[0].filters }), last_route());
+		click(columns[0]);
+		check("a month opens its documents", same(last_route().options, { docstatus: 1, company: "Acme Ltd", posting_date: ["between", ["2026-05-01", "2026-05-31"]] }), last_route());
+		click($q('[data-panel="aging"] .cvt-home-bucket'));
+		check("a part of the aging opens its invoices", same(last_route().options, { docstatus: 1, outstanding_amount: [">", 0], company: "Acme Ltd", due_date: [">=", "2026-10-22"] }), last_route());
+		click($q('[data-panel="aging"] .cvt-home-row'));
+		check("a customer opens their record", same(last_route().route, ["Form", "Customer", "C3"]), last_route());
+		click($q('[data-panel="deliver"] .cvt-home-row'));
+		check("an order opens itself", same(last_route().route, ["Form", "Sales Order", "SO-1"]), last_route());
+		click($q('[data-panel="deliver"] .cvt-home-all'));
+		check("See all opens the whole list", same(last_route(), { route: ["List", "Sales Order"], options: FIGURES.panels[3].filters }), last_route());
+		click($all(".cvt-home-tab")[1]);
+		check("the Notifications tab lists what is unread", text(".cvt-home-waiting .cvt-home-row-title") === "Payment received", text(".cvt-home-waiting"));
+		click($q(".cvt-home-waiting .cvt-home-row"));
+		check("and a notification opens its document", same(last_route().route, ["Form", "Payment Entry", "PE-1"]), last_route());
+		click($q(".cvt-home-refresh"));
+		check("Refresh reads the figures afresh", calls[calls.length - 1].endsWith("home.figures?fresh=1"), calls[calls.length - 1]);
+		answer("figures", FIGURES);
+		await settle();
+
+		rail_checks();
+		await rail_menus();
+		await layout_checks();
+		await redrawn();
+	}
+
+	function rail_checks() {
+		const tops = $all(".icons > .desktop-icon").sort((a, b) => a.getBoundingClientRect().top - b.getBoundingClientRect().top)
+			.map((tile) => tile.getAttribute("data-id"));
+		check("the modules in the order work flows through ERPNext, the rest after them in Frappe's",
+			same(tops, ["Selling", "Stock", "Accounting", "Organization", "Framework", "My Workspaces"]), tops);
+		const rail = $q(".desktop-container").getBoundingClientRect();
+		const home = $q(".cvt-home").getBoundingClientRect();
+		check("down the left of the home", Math.round(rail.width) === 248 && home.left >= rail.right + 15, [rail.left, rail.right, home.left]);
+		check("each module a row of its own", Math.round($q("#tile-Selling").getBoundingClientRect().width) > 200, $q("#tile-Selling").getBoundingClientRect().width);
+		check("a row keeps its square corners, not a tile's rounding", css("#tile-Selling", "border-top-left-radius") === "10px", css("#tile-Selling", "border-top-left-radius"));
+		check("a module with a menu has an arrow to open it", $q("#tile-Selling .cvt-rail-toggle") && $q("#tile-Accounting .cvt-rail-toggle"), "no arrows");
+		check("one with nothing to list has none", !$q("#tile-Organization .cvt-rail-toggle"), "an arrow");
+		check("the list's heading", css(".desktop-container", "content", "::after") === '"Modules"', css(".desktop-container", "content", "::after"));
+		const wrapper = $q(".desktop-wrapper").getBoundingClientRect();
+		check("the desk is drawn out to the window's edges past the page's padding", Math.round(wrapper.left) === 0 && Math.round(wrapper.right) === Math.round($q("#pane").clientWidth),
+			[wrapper.left, wrapper.right, $q("#pane").clientWidth]);
+	}
+
+	async function rail_menus() {
+		const selling = $q("#tile-Selling");
+		const routes = frappe.routes.length;
+		click(selling.querySelector(".cvt-rail-toggle"));
+		check("the arrow opens the module's menu, without opening the module",
+			selling.classList.contains("cvt-open") && css("#tile-Selling .cvt-rail-menu", "display") === "block" && frappe.routes.length === routes,
+			[selling.className, frappe.routes.length - routes]);
+		check("and says so to a screen reader", selling.querySelector(".cvt-rail-toggle").getAttribute("aria-expanded") === "true", "not expanded");
+		const shown = Array.from(selling.querySelectorAll(".cvt-rail-link")).filter((link) => link.offsetParent).map((link) => link.textContent);
+		check("its first entries show; a heading's wait under it", same(shown, ["Home", "Quotation", "Sales Order"]), shown);
+		const headings = Array.from(selling.querySelectorAll(".cvt-rail-heading")).map((heading) => heading.textContent);
+		check("a heading with nothing under it says nothing", same(headings, ["POS", "Reports"]), headings);
+		click(selling.querySelector(".cvt-rail-heading"));
+		check("a heading opens the entries under it", selling.querySelector(".cvt-rail-group").classList.contains("cvt-shown") &&
+			Array.from(selling.querySelectorAll(".cvt-rail-link")).some((link) => link.textContent === "POS Profile" && link.offsetParent), "still shut");
+		click(Array.from(selling.querySelectorAll(".cvt-rail-link")).find((link) => link.textContent === "Quotation"));
+		check("an entry opens as Frappe's sidebar opens it, with the module's menu beside it",
+			same(last_route(), { route: "/desk/quotation", options: { sidebar: "Selling" } }), last_route());
+		const accounting = $q("#tile-Accounting");
+		click(accounting.querySelector(".cvt-rail-toggle"));
+		const modules = Array.from(accounting.querySelectorAll(".cvt-rail-link")).map((link) => link.textContent);
+		check("a folder's menu is its modules, a hidden one left out", same(modules, ["Invoicing", "Payments"]), modules);
+		check("one menu open at a time", !selling.classList.contains("cvt-open") && accounting.classList.contains("cvt-open"), [selling.className, accounting.className]);
+		click(Array.from(accounting.querySelectorAll(".cvt-rail-link")).find((link) => link.textContent === "Payments"));
+		check("a module in a folder opens where its own tile would", same(last_route(), { route: "/desk/payment-entry", options: { sidebar: "Payments" } }), last_route());
+		click(accounting.querySelector(".cvt-rail-toggle"));
+		check("the arrow shuts it again", !accounting.classList.contains("cvt-open"), accounting.className);
+	}
+
+	async function layout_checks() {
+		const wrapper = $q(".desktop-wrapper");
+		wrapper.setAttribute("data-mode", "Edit");
+		check("while the desk is edited the home is out of the way", css(".cvt-home", "display") === "none", css(".cvt-home", "display"));
+		check("and the tiles are Frappe's own", Math.round($q("#tile-Selling").getBoundingClientRect().width) === 127, $q("#tile-Selling").getBoundingClientRect().width);
+		wrapper.removeAttribute("data-mode");
+		check("and back once the editing is done", css(".cvt-home", "display") !== "none", css(".cvt-home", "display"));
+	}
+
+	// Frappe draws the desk afresh each time it is come back to: the home goes back on, without asking again
+	async function redrawn() {
+		const asked = calls.length;
+		document.getElementById("page-body").innerHTML = DESK;
+		trigger("desktop_screen");
+		await settle();
+		check("drawn afresh, the desk gets its home back", $q(".desktop-wrapper > .cvt-home .cvt-home-hero"), "no home");
+		check("from what it was told a moment ago", calls.length === asked, calls.slice(asked));
+		check("and its menus", $q("#tile-Selling .cvt-rail-toggle"), "no menus");
+		check("opened at its top", $q("#pane").scrollTop === 0, $q("#pane").scrollTop);
+	}
+
+	async function off_case() {
+		await settle();
+		check("switched off in the settings: no home", !$q(".cvt-home") && !$q(".desktop-wrapper").classList.contains("cvt-has-home"), $q(".desktop-wrapper").className);
+		check("nothing is asked of the server", calls.length === 0, calls);
+		check("the tiles are Frappe's own", Math.round($q("#tile-Selling").getBoundingClientRect().width) === 127, $q("#tile-Selling").getBoundingClientRect().width);
+	}
+
+	async function hrms_case() {
+		await settle();
+		check("beside HRMS Addon's own desk home: this one stands aside", !$q(".cvt-home") && calls.length === 0, calls);
+	}
+
+	async function fail_case() {
+		await settle();
+		answer("summary", null, false);
+		await settle();
+		check("a summary that fails leaves the desk as Frappe drew it",
+			!$q(".cvt-home") && !$q(".desktop-wrapper").classList.contains("cvt-has-home") && !$q(".cvt-rail-toggle"), $q(".desktop-wrapper").innerHTML.slice(0, 200));
+		check("and its tiles as Frappe drew them", Math.round($q("#tile-Selling").getBoundingClientRect().width) === 127, $q("#tile-Selling").getBoundingClientRect().width);
+		check("the figures are never asked for", !calls.some((url) => url.includes("figures")), calls);
+		trigger("page-change");
+		await settle();
+		check("nor is the summary asked again at once", calls.filter((url) => url.includes("summary")).length === 1, calls);
+	}
+
+	async function phone_case() {
+		await settle();
+		answer("summary", SUMMARY);
+		await settle();
+		answer("figures", FIGURES);
+		await settle();
+		const home = $q(".cvt-home").getBoundingClientRect();
+		const rail = $q(".desktop-container").getBoundingClientRect();
+		check(`${innerWidth}px: the modules go under the home`, rail.top >= home.bottom, [home.bottom, rail.top]);
+		check(`${innerWidth}px: the figures two across`, $all(".cvt-home-card")[0].getBoundingClientRect().top === $all(".cvt-home-card")[1].getBoundingClientRect().top &&
+			$all(".cvt-home-card")[2].getBoundingClientRect().top > $all(".cvt-home-card")[0].getBoundingClientRect().top, "not two across");
+		check(`${innerWidth}px: nothing is wider than the window`, document.documentElement.scrollWidth <= innerWidth && $q("#pane").scrollWidth <= $q("#pane").clientWidth,
+			[document.documentElement.scrollWidth, $q("#pane").scrollWidth, innerWidth]);
+		check(`${innerWidth}px: the panels one under the other`, $all(".cvt-home-grid > .cvt-home-panel").every((panel) => Math.round(panel.getBoundingClientRect().width) === Math.round($q(".cvt-home-grid").getBoundingClientRect().width)),
+			$all(".cvt-home-grid > .cvt-home-panel").map((panel) => panel.getBoundingClientRect().width));
+	}
+
+	(async function () {
+		await new Promise((resolve) => {
+			const started = Date.now();
+			const wait = () => (innerWidth > 0 || Date.now() - started > 3000 ? resolve() : setTimeout(wait, 50));
+			wait();
+		});
+		start_desk();
+		const cases = { main: main_case, off: off_case, hrms: hrms_case, fail: fail_case, phone: phone_case };
+		await cases[CASE]();
+		report();
+	})().catch((error) => {
+		check(`${CASE}: the test ran to the end`, false, String((error && error.stack) || error));
+		report();
+	});
+</script>
+</body>
+</html>

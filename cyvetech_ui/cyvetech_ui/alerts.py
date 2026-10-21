@@ -51,11 +51,15 @@ def my_alerts(limit=LIMIT):
 	}
 
 
-def _assignments(user, day):
-	"""Open to-dos: what the user has been given to do."""
+def _assignments(user, day, doctypes=None):
+	"""Open to-dos: what the user has been given to do, about documents of
+	`doctypes` only where they are named (a module page's)."""
+	filters = {"allocated_to": user, "status": "Open"}
+	if doctypes:
+		filters["reference_type"] = ["in", list(doctypes)]
 	rows = frappe.get_all(
 		"ToDo",
-		filters={"allocated_to": user, "status": "Open"},
+		filters=filters,
 		fields=["name", "reference_type", "reference_name", "description", "date", "priority", "creation"],
 		order_by="modified desc",
 		limit=LIMIT,
@@ -76,13 +80,18 @@ def _assignments(user, day):
 	]
 
 
-def _notifications(user):
+def _notifications(user, doctypes=None):
 	"""The user's notifications, newest first, read or not: a read one is still
-	what happened. The unread are marked and counted on their own."""
+	what happened. The unread are marked and counted on their own. Where
+	`doctypes` are named, only those about their documents, and the alerts sent
+	from CyveTech User Alert, which may be about one of them."""
 	body = _body_field()
+	filters = {"for_user": user}
+	if doctypes:
+		filters["document_type"] = ["in", [*doctypes, ALERT]]
 	rows = frappe.get_all(
 		"Notification Log",
-		filters={"for_user": user},
+		filters=filters,
 		fields=["name", "subject", "type", "document_type", "document_name", "from_user", "creation", "read"]
 		+ ([body] if body else []),
 		order_by="creation desc",

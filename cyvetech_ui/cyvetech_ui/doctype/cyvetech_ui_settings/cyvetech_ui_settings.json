@@ -25,6 +25,31 @@
   "tile_radius",
   "column_break_tiles",
   "theme_preview",
+  "section_home_colors",
+  "header_color",
+  "accent_color",
+  "column_break_home_colors",
+  "danger_color",
+  "warning_color",
+  "success_color",
+  "tab_home",
+  "home_enabled",
+  "module_pages_enabled",
+  "column_break_home",
+  "home_help",
+  "section_home_panels",
+  "home_attention",
+  "home_trend",
+  "home_aging",
+  "home_cash",
+  "home_customers",
+  "home_deliver",
+  "column_break_home_panels",
+  "home_receive",
+  "home_reorder",
+  "home_production",
+  "home_tasks",
+  "home_drafts",
   "tab_charts",
   "apply_chart_colors",
   "vary_single_series",
@@ -181,6 +206,165 @@
    "fieldname": "theme_preview",
    "fieldtype": "HTML",
    "label": "Preview"
+  },
+  {
+   "description": "The desk home and each module's header. The status colors are used in My Alerts and its pop-ups too.",
+   "fieldname": "section_home_colors",
+   "fieldtype": "Section Break",
+   "label": "Home and Module Pages"
+  },
+  {
+   "description": "The greeting banner and each module's header. White text goes on it, so keep it dark. Leave blank to use the sidebar color.",
+   "fieldname": "header_color",
+   "fieldtype": "Color",
+   "label": "Header"
+  },
+  {
+   "default": "#2F64B0",
+   "description": "Links, the blue figures, and what is due soon.",
+   "fieldname": "accent_color",
+   "fieldtype": "Color",
+   "label": "Accent"
+  },
+  {
+   "fieldname": "column_break_home_colors",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "#C53030",
+   "description": "What is late, owed past its due date, or below zero.",
+   "fieldname": "danger_color",
+   "fieldtype": "Color",
+   "label": "Overdue"
+  },
+  {
+   "default": "#B45309",
+   "description": "What is due today, or soon needs a look.",
+   "fieldname": "warning_color",
+   "fieldtype": "Color",
+   "label": "Due Today"
+  },
+  {
+   "default": "#1E7A46",
+   "description": "What is paid, in stock, or on time.",
+   "fieldname": "success_color",
+   "fieldtype": "Color",
+   "label": "Done"
+  },
+  {
+   "fieldname": "tab_home",
+   "fieldtype": "Tab Break",
+   "label": "Home"
+  },
+  {
+   "default": "1",
+   "description": "A greeting, the day's figures, what waits for each user, what needs attention in the business, and the modules down the left, on the desk with Frappe's own tiles. Off: the desk as Frappe draws it.",
+   "fieldname": "home_enabled",
+   "fieldtype": "Check",
+   "label": "Show the Home Dashboard on the Desk"
+  },
+  {
+   "default": "1",
+   "description": "Each module opens under a header with its picture, its menu's groups, what needs attention and what waits for the user in it, and a button to make the document most made there, over ERPNext's own cards. Off: Frappe's own module pages.",
+   "fieldname": "module_pages_enabled",
+   "fieldtype": "Check",
+   "label": "Give Each Module the Home's Look"
+  },
+  {
+   "fieldname": "column_break_home",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "home_help",
+   "fieldtype": "HTML",
+   "options": "<div class=\"text-muted small\"><p><b>Whose figures.</b> Each user's home follows what their roles are about: accounts users see sales, what is owed both ways and the cash; sales users their orders and quotations; purchase users what is on its way; stock users the stock value and what to reorder; manufacturing, projects and support their own. Someone with several roles gets them all, the money first. Every figure counts only what that user may read, so User Permissions narrow it as they narrow the lists.</p><p><b>The company.</b> Money is the user's default company's, in its currency.</p><p><b>Fresh enough.</b> The figures are kept for five minutes. <b>Refresh</b> on the home reads them again.</p></div>"
+  },
+  {
+   "description": "Untick a panel to take it off everyone's home. Each shows only to the users whose roles it is for.",
+   "fieldname": "section_home_panels",
+   "fieldtype": "Section Break",
+   "label": "Panels"
+  },
+  {
+   "default": "1",
+   "description": "Late orders and deliveries, overdue invoices, bills due this week, stock below zero, late work orders and tasks: each counted, and each opening its list.",
+   "fieldname": "home_attention",
+   "fieldtype": "Check",
+   "label": "Needs Attention"
+  },
+  {
+   "default": "1",
+   "description": "Six months of what was billed and what came in. Users who may read sales orders but not invoices see what was ordered.",
+   "fieldname": "home_trend",
+   "fieldtype": "Check",
+   "label": "Sales and Collections"
+  },
+  {
+   "default": "1",
+   "description": "What customers owe, by days overdue, and who owes the most past due.",
+   "fieldname": "home_aging",
+   "fieldtype": "Check",
+   "label": "Receivables Aging"
+  },
+  {
+   "default": "1",
+   "description": "The balance of each bank and cash account today.",
+   "fieldname": "home_cash",
+   "fieldtype": "Check",
+   "label": "Cash and Bank"
+  },
+  {
+   "default": "1",
+   "description": "By what was billed this month, or ordered, for users who may not read invoices.",
+   "fieldname": "home_customers",
+   "fieldtype": "Check",
+   "label": "Top Customers This Month"
+  },
+  {
+   "default": "1",
+   "description": "Open sales orders, the soonest delivery date first.",
+   "fieldname": "home_deliver",
+   "fieldtype": "Check",
+   "label": "Orders to Deliver"
+  },
+  {
+   "fieldname": "column_break_home_panels",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "1",
+   "description": "Open purchase orders, the soonest expected first.",
+   "fieldname": "home_receive",
+   "fieldtype": "Check",
+   "label": "Purchases to Receive"
+  },
+  {
+   "default": "1",
+   "description": "Items at or under their reorder level, and any going below zero.",
+   "fieldname": "home_reorder",
+   "fieldtype": "Check",
+   "label": "Stock to Reorder"
+  },
+  {
+   "default": "1",
+   "description": "Open work orders, the soonest planned end first.",
+   "fieldname": "home_production",
+   "fieldtype": "Check",
+   "label": "Work Orders Due"
+  },
+  {
+   "default": "1",
+   "description": "Open project tasks, the soonest end date first.",
+   "fieldname": "home_tasks",
+   "fieldtype": "Check",
+   "label": "Tasks Due"
+  },
+  {
+   "default": "1",
+   "description": "Each user's own drafts from the last 60 days, the oldest first.",
+   "fieldname": "home_drafts",
+   "fieldtype": "Check",
+   "label": "Your Drafts"
   },
   {
    "fieldname": "tab_charts",
@@ -391,7 +575,7 @@
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2026-09-28 18:00:00.000000",
+ "modified": "2026-10-22 12:00:00.000000",
  "modified_by": "Administrator",
  "module": "CyveTech UI",
  "name": "CyveTech UI Settings",

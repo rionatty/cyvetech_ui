@@ -3,7 +3,7 @@ name = "cyvetech_ui"
 authors = [
     { name = "CyveTech", email = "ferdinand@cyvetech.com"}
 ]
-description = "Branding, theme, desk modules, and user alerts for the Frappe / ERPNext desk"
+description = "Branding, theme, a desk home for ERPNext, module pages, desk modules, and user alerts for the Frappe / ERPNext desk"
 # Frappe v16's app template asks for Python 3.14. Nothing here needs more than
 # 3.10, so the app also installs on v15 benches.
 requires-python = ">=3.10"

@@ -121,6 +121,107 @@
 		);
 	};
 
+	// ── Where the desk's modules and their entries open ──────────────────
+	// Shared by the desk home (cyvetech_ui_home.js) and the module pages
+	// (cyvetech_ui_module_pages.js), each of which may be switched off alone.
+	const nav = cyvetech_ui.nav || {};
+
+	// where an entry of a module's menu goes, as Frappe's own sidebar works it
+	// out (frappe/public/js/frappe/ui/sidebar/sidebar_item.js, get_path)
+	nav.path_of = function (item) {
+		try {
+			if (item.link_type === "URL") return item.url || null;
+			if (item.link_type === "Workspace") {
+				if (item.route) return item.route;
+				const slug = frappe.router.slug(item.link_to);
+				const workspace = (frappe.workspaces || {})[slug];
+				return (workspace && !workspace.public ? "/desk/private/" : "/desk/") + slug;
+			}
+			const args = { type: item.link_type, name: item.link_to };
+			if (item.link_type === "Report") {
+				if (!item.report) return null;
+				args.is_query_report =
+					item.report.report_type === "Query Report" || item.report.report_type === "Script Report";
+				args.report_ref_doctype = item.report.ref_doctype;
+			} else if (item.link_type === "Page" && item.route_options) {
+				args.route_options = JSON.parse(item.route_options);
+			} else {
+				args.tab = item.tab;
+				// a list opened on the entry's own filters
+				const filtered =
+					item.link_type === "DocType" && (item.filters ? list_filters(item.filters) : item.route_options);
+				if (filtered) {
+					args.doc_view = "List";
+					args.route_options = typeof filtered === "string" ? JSON.parse(filtered) : filtered;
+				}
+			}
+			return frappe.utils.generate_route(args) || null;
+		} catch (error) {
+			return null;
+		}
+	};
+
+	// an entry's filters as the list takes them: each field's value, without its operator
+	function list_filters(filters) {
+		const found = JSON.parse(frappe.utils.get_filter_as_json(JSON.parse(filters)) || "null");
+		if (!found) return null;
+		Object.keys(found).forEach((field) => {
+			if (Array.isArray(found[field])) found[field] = found[field][1];
+		});
+		return found;
+	}
+
+	// a module's menu, as the boot carries it cut down to what the user may open
+	nav.sidebar_of = function (label) {
+		return (frappe.boot.workspace_sidebar_item || {})[String(label).toLowerCase()] || null;
+	};
+
+	// The modules a folder or an app holds on the desk (Accounting holds
+	// Invoicing, Payments and the rest), as Frappe nests them: a hidden one is
+	// not among them.
+	nav.children_of = function (label) {
+		return (frappe.boot.desktop_icons || []).filter(
+			(tile) => tile && tile.parent_icon === label && !tile.hidden && tile.label !== label
+		);
+	};
+
+	// where a module's tile opens: its menu's first entry, or for a folder, its
+	// first module's
+	nav.tile_path = function (label, depth) {
+		const sidebar = nav.sidebar_of(label);
+		const first = sidebar && (sidebar.items || []).find((item) => item && item.type === "Link" && !item.hidden);
+		if (first) return nav.path_of(first);
+		if ((depth || 0) > 1) return null;
+		for (const child of nav.children_of(label)) {
+			const path = nav.tile_path(child.label, (depth || 0) + 1);
+			if (path) return path;
+		}
+		return null;
+	};
+
+	// An address opened as Frappe's router opens a link of its own (router.js,
+	// a click on an <a>): what follows the ? as route options, what follows the
+	// # as the tab. The module's sidebar is asked for by name, as Frappe's tile
+	// asks for it, but only where nothing else rides on the route options:
+	// Frappe's sidebar clears them all once it has read its own, and a list's
+	// filters would go with it. Another site's address opens beside the desk.
+	nav.follow = function (path, module, outside) {
+		const url = new URL(path, window.location.origin);
+		if (outside || url.origin !== window.location.origin || !frappe.router.is_app_route(url.pathname)) {
+			window.open(url.href, "_blank", "noopener");
+			return;
+		}
+		const options = {};
+		url.searchParams.forEach((value, key) => {
+			options[key] = value;
+		});
+		frappe.route_options = Object.keys(options).length ? options : module ? { sidebar: module } : null;
+		if (url.hash) frappe.route_hash = url.hash;
+		frappe.set_route(url.pathname);
+	};
+
+	cyvetech_ui.nav = nav;
+
 	cyvetech_ui.apply_theme(conf.theme);
 	rebrand();
 	cyvetech_ui.hide_modules(conf.hidden_modules);

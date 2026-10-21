@@ -14,6 +14,11 @@ COLOR_FIELDS = (
 	"sidebar_text_color",
 	"highlight_color",
 	"page_color",
+	"header_color",
+	"accent_color",
+	"danger_color",
+	"warning_color",
+	"success_color",
 	"login_panel_color",
 	"login_button_color",
 	"login_background_color",
@@ -22,6 +27,10 @@ COLOR_FIELDS = (
 
 # Shown to guests (the sign-in page, the browser tab), so they must be public.
 PUBLIC_IMAGE_FIELDS = ("brand_logo", "favicon", "login_logo", "login_image")
+
+# White text goes on these: the header's greeting, and the count badges in the
+# status colors. A color too light for it is saved, with a warning.
+WHITE_TEXT_FIELDS = ("header_color", "accent_color", "danger_color", "warning_color", "success_color")
 
 
 class CyveTechUISettings(Document):
@@ -39,6 +48,18 @@ class CyveTechUISettings(Document):
 
 		self.tile_radius = color_rules.clamp_radius(self.tile_radius)
 		self.popup_seconds = min(60, max(3, cint(self.popup_seconds) or 8))
+
+		too_light = color_rules.white_text_shortfalls(
+			{_(self.meta.get_label(fieldname)): self.get(fieldname) for fieldname in WHITE_TEXT_FIELDS}
+		)
+		if too_light:
+			frappe.msgprint(
+				_("White text is hard to read on {0}. A darker shade keeps it readable.").format(
+					", ".join(frappe.bold(label) for label in too_light)
+				),
+				title=_("Colors Too Light"),
+				indicator="orange",
+			)
 
 		for fieldname in PUBLIC_IMAGE_FIELDS:
 			if (self.get(fieldname) or "").startswith("/private/"):

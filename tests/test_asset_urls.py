@@ -49,11 +49,18 @@ class Versioned(unittest.TestCase):
 class Hooks(unittest.TestCase):
 	def test_every_desk_file_is_asked_for_by_an_address_that_follows_its_contents(self):
 		includes = hooks.app_include_css + hooks.app_include_js
-		self.assertEqual(len(includes), 4)
+		# two stylesheets (the theme, the home), five scripts (the desk, charts, alerts, the home, the module pages)
+		self.assertEqual(len(includes), 7)
 		for url in includes:
 			self.assertRegex(url, VERSIONED)
 			path = url.split("?")[0][len(asset_urls.PREFIX) :]
 			self.assertTrue(os.path.isfile(os.path.join(asset_urls.PUBLIC, *path.split("/"))), path)
+
+	def test_the_shared_navigation_loads_before_the_scripts_that_use_it(self):
+		names = [url.split("?")[0].rsplit("/", 1)[1] for url in hooks.app_include_js]
+		self.assertEqual(names[0], "cyvetech_ui_desk.js")
+		self.assertLess(names.index("cyvetech_ui_desk.js"), names.index("cyvetech_ui_home.js"))
+		self.assertLess(names.index("cyvetech_ui_desk.js"), names.index("cyvetech_ui_module_pages.js"))
 
 	def test_the_sign_in_page_asks_for_its_stylesheet_and_script_the_same_way(self):
 		template = os.path.join(os.path.dirname(asset_urls.PUBLIC), "www", "login.html")

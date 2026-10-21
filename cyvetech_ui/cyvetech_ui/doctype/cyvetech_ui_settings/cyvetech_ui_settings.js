@@ -5,7 +5,19 @@
 // the colors back to CyveTech's defaults, a test alert, and the list of
 // modules on the desk.
 
-const CVT_THEME_FIELDS = ["sidebar_color", "sidebar_text_color", "highlight_color", "page_color", "tile_radius", "rounded_tiles"];
+const CVT_THEME_FIELDS = [
+	"sidebar_color",
+	"sidebar_text_color",
+	"highlight_color",
+	"page_color",
+	"tile_radius",
+	"rounded_tiles",
+	"header_color",
+	"accent_color",
+	"danger_color",
+	"warning_color",
+	"success_color",
+];
 const CVT_HEX = /^#(?:[0-9a-fA-F]{3}){1,2}$/;
 
 frappe.ui.form.on("CyveTech UI Settings", {
@@ -94,7 +106,8 @@ function render_modules_help(frm) {
 }
 
 // A small picture of the desk in the chosen colors: sidebar with a selected
-// item, the page, and two cards with the chosen corner radius.
+// item, and on the page the home's header with its button, and two cards with
+// the chosen corner radius, each with a status color.
 function render_preview(frm) {
 	const field = frm.get_field("theme_preview");
 	if (!field) return;
@@ -104,18 +117,30 @@ function render_preview(frm) {
 	const highlight = pick(d.highlight_color, "#EAA51A");
 	const page = pick(d.page_color, "#F4F6FA");
 	const text = pick(d.sidebar_text_color, ink_for(sidebar));
+	const header = pick(d.header_color, sidebar);
+	const accent = pick(d.accent_color, "#2F64B0");
+	const danger = pick(d.danger_color, "#C53030");
+	const success = pick(d.success_color, "#1E7A46");
 	const radius = d.rounded_tiles ? Math.max(0, Math.min(32, cint(d.tile_radius))) : 4;
+	const card = (band, label) => `
+		<div style="flex:1; padding:8px 10px; background:#fff; border:1px solid #e2e8f0; border-top:3px solid ${band}; border-radius:${radius}px;">
+			<div style="color:#64748b;">${label}</div>
+			<div style="font-weight:700; font-size:15px; color:#111827;">UGX 12.4M</div>
+		</div>`;
 	field.$wrapper.html(`
-		<div style="display:flex; height:150px; border:1px solid var(--border-color); border-radius:12px; overflow:hidden; font-size:11px;">
-			<div style="width:34%; background:${sidebar}; color:${text}; padding:10px 8px; display:flex; flex-direction:column; gap:6px;">
+		<div style="display:flex; height:170px; border:1px solid var(--border-color); border-radius:12px; overflow:hidden; font-size:11px;">
+			<div style="width:30%; background:${sidebar}; color:${text}; padding:10px 8px; display:flex; flex-direction:column; gap:6px;">
 				<div style="font-weight:600; opacity:.95;">${__("Selling")}</div>
 				<div style="padding:4px 6px; border-radius:6px; background:${highlight}; color:${ink_for(highlight)}; font-weight:600;">${__("Sales Order")}</div>
 				<div style="padding:4px 6px; opacity:.9;">${__("Sales Invoice")}</div>
 				<div style="padding:4px 6px; opacity:.9;">${__("Customer")}</div>
 			</div>
-			<div style="flex:1; background:${page}; padding:12px; display:flex; gap:10px; align-items:flex-start;">
-				<div style="flex:1; height:56px; background:#fff; border:1px solid #e2e8f0; border-radius:${radius}px;"></div>
-				<div style="flex:1; height:56px; background:#fff; border:1px solid #e2e8f0; border-radius:${radius}px;"></div>
+			<div style="flex:1; background:${page}; padding:10px; display:flex; flex-direction:column; gap:8px;">
+				<div style="display:flex; align-items:center; justify-content:space-between; gap:8px; padding:10px 12px; border-radius:12px; color:${ink_for(header)}; background:linear-gradient(118deg, ${header}, ${accent});">
+					<b style="font-size:13px;">${__("Good morning")}</b>
+					<span style="padding:4px 9px; border-radius:8px; background:${highlight}; color:${ink_for(highlight)}; font-weight:700;">+ ${__("New Sales Invoice")}</span>
+				</div>
+				<div style="display:flex; gap:8px;">${card(success, __("Sales This Month"))}${card(danger, __("To Collect"))}</div>
 			</div>
 		</div>
 		<div class="text-muted small" style="margin-top:6px;">${__("Preview. Save to apply it to everyone's desk.")}</div>

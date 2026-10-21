@@ -89,9 +89,15 @@ def clamp_radius(value, default=14):
 def theme_variables(colors, defaults, radius=None):
 	"""The CSS custom properties the desk stylesheet reads.
 
-	colors / defaults: {"sidebar", "sidebar_text", "highlight", "page"}.
-	A blank or malformed value falls back to the default; sidebar_text is the
-	one exception, where blank means "work it out from the sidebar".
+	colors / defaults: {"sidebar", "sidebar_text", "highlight", "page",
+	"header", "accent", "danger", "warning", "success"}. A blank or malformed
+	value falls back to the default. Two blanks mean more than that:
+	sidebar_text works itself out from the sidebar, and the header is the
+	sidebar color.
+
+	The desk home and the module pages draw only with these (home and module
+	page styles in public/css/cyvetech_ui_home.css), so every color on them is
+	one picked here or worked out from one.
 	"""
 
 	def pick(key):
@@ -101,8 +107,11 @@ def theme_variables(colors, defaults, radius=None):
 	page = pick("page")
 	highlight = pick("highlight")
 	text = normalize_hex(colors.get("sidebar_text")) or readable_text(sidebar)
+	header = pick("header") or sidebar
+	accent = pick("accent") or "#2f64b0"
 
 	return {
+		**_home_variables(header, accent, page, pick),
 		"--cvt-sidebar-bg": sidebar,
 		# a step darker, for the desktop's top bar and the alerts panel header
 		"--cvt-sidebar-deep": mix(sidebar, "#000000", 0.12),
@@ -118,6 +127,35 @@ def theme_variables(colors, defaults, radius=None):
 		"--cvt-page-text": readable_text(page),
 		"--cvt-tile-radius": f"{clamp_radius(radius)}px",
 	}
+
+
+def _home_variables(header, accent, page, pick):
+	"""The home's and the module pages' colors, and the status bands."""
+	return {
+		"--cvt-header": header,
+		# the gradient across a header: darker at its start, toward the accent at its end
+		"--cvt-header-deep": mix(header, "#000000", 0.35),
+		"--cvt-header-mid": mix(header, accent, 0.4),
+		"--cvt-on-header": readable_text(header),
+		"--cvt-accent": accent,
+		# hairlines between the home's cards and rows, a shade off the page
+		"--cvt-line": mix(page, header, 0.14),
+		"--cvt-band-overdue": pick("danger") or "#c53030",
+		"--cvt-band-today": pick("warning") or "#b45309",
+		"--cvt-band-soon": accent,
+		"--cvt-band-good": pick("success") or "#1e7a46",
+	}
+
+
+def white_text_shortfalls(colors, minimum=4.5):
+	"""The colors white text would not read on: {label: hex} in, the labels
+	whose contrast with white is under `minimum` out, in the order given."""
+	out = []
+	for label, value in colors.items():
+		color = normalize_hex(value)
+		if color and contrast(color, LIGHT_INK) < minimum:
+			out.append(label)
+	return out
 
 
 def chart_palette(values, defaults):

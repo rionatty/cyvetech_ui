@@ -17,7 +17,7 @@ straight off the document, for two reasons:
 
 import frappe
 
-from cyvetech_ui.cyvetech_ui import home_rules
+from cyvetech_ui.cyvetech_ui import dashboards_rules
 
 DOCTYPE = "CyveTech UI Settings"
 
@@ -65,7 +65,7 @@ DEFAULTS = {
 	"success_color": THEME_DEFAULTS["success"],
 	"home_enabled": 1,
 	"module_pages_enabled": 1,
-	**{switch: 1 for switch in home_rules.SWITCHES},
+	**{switch: 1 for switch in dashboards_rules.SWITCHES},
 	# Charts
 	"apply_chart_colors": 1,
 	"vary_single_series": 1,
@@ -102,7 +102,7 @@ CHECKS = {
 	"popup_sound",
 	"home_enabled",
 	"module_pages_enabled",
-	*home_rules.SWITCHES,
+	*dashboards_rules.SWITCHES,
 }
 INTS = {"tile_radius", "popup_seconds"}
 

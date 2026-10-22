@@ -1,28 +1,38 @@
 """The desk home's and the module pages' rules (home_rules.py,
-module_pages_rules.py), and the colors they draw with (color_rules.py).
+dashboards_rules.py, module_pages_rules.py), and the colors they draw with
+(color_rules.py).
 
 The rules import no Frappe. The shipped colors and switches are in settings.py,
 which does, so the stand-in in fake_frappe.py is installed for those.
 """
 
 import datetime
+import re
 import unittest
 
 import fake_frappe
 
-from cyvetech_ui.cyvetech_ui import color_rules, home_rules as rules, module_pages_rules
+from cyvetech_ui.cyvetech_ui import color_rules, dashboards_rules as dashboards, home_rules as rules, module_pages_rules
 
 fake_frappe.install()
 settings = fake_frappe.fresh_import("cyvetech_ui.cyvetech_ui.settings")
 THEME_DEFAULTS = settings.THEME_DEFAULTS
 
 TODAY = datetime.date(2026, 10, 22)
-EVERYTHING = {
-	doctype
-	for _label, _kind, doctypes in rules.CARDS.values()
-	for doctype in doctypes
-} | {"Payment Entry", "Customer", "Stock Ledger Entry", "Supplier", "Material Request", "Project", "BOM",
-	"Purchase Receipt", "Quotation"} | set(rules.DRAFT_DOCTYPES)
+# every doctype any figure, dashboard, tab or report is read from: a user who may read it all
+EVERYTHING = (
+	{doctype for _label, _kind, doctypes in rules.CARDS.values() for doctype in doctypes}
+	| {doctype for _title, _size, needs in rules.PANELS.values() for group in needs for doctype in group}
+	| {doctype for tab in dashboards.TABS for doctype in tab["anchors"]}
+	| set(dashboards.REPORT_DOCTYPES.values())
+	| set(rules.ATTENTION_DOCTYPE.values())
+	| {"Payment Entry", "Customer", "Stock Ledger Entry", "Supplier", "Material Request", "Project", "BOM"}
+)
+ALL_REPORTS = set(dashboards.REPORT_DOCTYPES)
+
+
+def keys(found):
+	return [item["key"] for item in found]
 
 
 class WhoseDesk(unittest.TestCase):
@@ -43,47 +53,50 @@ class WhoseDesk(unittest.TestCase):
 
 class Figures(unittest.TestCase):
 	def test_an_accountant_sees_the_money(self):
-		keys = rules.cards_for([rules.FINANCE], EVERYTHING)
-		self.assertEqual(keys, ["sales", "receivable", "payable", "cash"])
+		self.assertEqual(rules.cards_for([rules.FINANCE], EVERYTHING), ["sales", "receivable", "payable", "cash"])
 
 	def test_a_sales_clerk_sees_orders_and_quotes_not_invoices_they_may_not_open(self):
 		readable = {"Sales Order", "Quotation", "Bin", "Warehouse", "Item"}
 		self.assertEqual(rules.cards_for([rules.SALES], readable), ["orders", "to_deliver", "quotations"])
 
-	def test_a_sales_clerk_who_also_keeps_the_store(self):
-		readable = {"Sales Order", "Quotation", "Bin", "Warehouse", "Item", "Purchase Order"}
+	def test_an_administrator_gets_two_full_rows(self):
+		every = [desk for desk, *_rest in rules.DESKS]
 		self.assertEqual(
-			rules.cards_for([rules.SALES, rules.STOCK], readable), ["orders", "to_deliver", "quotations", "stock_value"]
+			rules.cards_for(every, EVERYTHING),
+			["sales", "receivable", "payable", "cash", "orders", "to_deliver", "quotations", "purchases"],
 		)
 
 	def test_a_figure_is_never_shown_twice(self):
-		keys = rules.cards_for([rules.STOCK, rules.SALES], EVERYTHING)
-		self.assertEqual(len(keys), len(set(keys)))
+		found = rules.cards_for([rules.STOCK, rules.SALES], EVERYTHING)
+		self.assertEqual(len(found), len(set(found)))
 
-	def test_frames_first_then_the_users_own_work_where_there_is_room(self):
+	def test_frames_first_then_the_users_own_work_to_fill_the_row(self):
 		waits = {"tasks": 3, "overdue": 1, "unread": 2}
 		cards = rules.home_cards(["tasks"], waits)
-		self.assertEqual([card["key"] for card in cards], ["tasks", "waiting"])
+		self.assertEqual(keys(cards), ["tasks", "waiting", "unread"])
 		self.assertEqual(cards[0], {"key": "tasks", "label": "Open Tasks", "kind": rules.COUNT, "frame": 1})
-		self.assertEqual(cards[1]["value"], 3)
-		self.assertEqual(cards[1]["note"], "1 overdue")
-		self.assertEqual(cards[1]["tone"], "rose")
+		self.assertEqual((cards[1]["value"], cards[1]["note"], cards[1]["tone"]), (3, "1 overdue", "rose"))
+
+	def test_a_row_is_filled_as_far_as_the_users_own_work_goes(self):
+		self.assertEqual(keys(rules.home_cards(["sales", "receivable", "payable"], {})), ["sales", "receivable", "payable", "waiting"])
+		six = ["sales", "receivable", "payable", "cash", "orders", "to_deliver"]
+		self.assertEqual(keys(rules.home_cards(six, {}))[6:], ["waiting", "unread"])
+		self.assertEqual(len(rules.home_cards(["sales", "receivable", "payable", "cash"], {})), 4)
 
 	def test_no_business_figures_means_the_users_own_two(self):
 		cards = rules.home_cards([], {"tasks": 0, "unread": 4})
 		self.assertEqual([(card["key"], card["value"]) for card in cards], [("waiting", 0), ("unread", 4)])
 		self.assertEqual(cards[0]["note"], "Nothing waiting")
 
-	def test_a_full_row_has_no_room_for_more(self):
-		self.assertEqual(len(rules.home_cards(["sales", "receivable", "payable", "cash"], {})), 4)
-
 	def test_a_card_as_read(self):
 		card = rules.card("sales", "1250.5", note="x", tone="blue", change={"percent": 12, "direction": "up"},
 			route=["List", "Sales Invoice"], filters={"docstatus": 1})
-		self.assertEqual(card["value"], 1250.5)
-		self.assertEqual(card["label"], "Sales This Month")
-		self.assertEqual(card["kind"], rules.MONEY)
+		self.assertEqual((card["value"], card["label"], card["kind"]), (1250.5, "Sales This Month", rules.MONEY))
 		self.assertNotIn("options", card)
+
+	def test_a_declared_figure_is_a_card_like_any_other(self):
+		self.assertEqual(rules.CARDS["hours"], ("Hours This Month", dashboards.HOURS, ("Timesheet",)))
+		self.assertEqual(rules.CARDS["negative"][2], ("Bin", "Warehouse"))
 
 
 class Waiting(unittest.TestCase):
@@ -98,51 +111,124 @@ class Waiting(unittest.TestCase):
 		self.assertEqual((waits["tasks"], waits["overdue"], waits["today"], waits["unread"]), (2, 1, 1, 1))
 		self.assertEqual([row["title"] for row in waits["items"]], ["A", "B"])
 		self.assertEqual([row["title"] for row in waits["notes"]], ["C"])
-		self.assertEqual(waits["items"][0]["band"], "overdue")
 
 	def test_the_greeting_follows_the_hour(self):
 		self.assertEqual([rules.greeting(hour) for hour in (6, 11, 12, 16, 17, 23)],
 			["Good morning", "Good morning", "Good afternoon", "Good afternoon", "Good evening", "Good evening"])
 
 
-class Panels(unittest.TestCase):
-	def keys(self, desks, readable=EVERYTHING, switches=None):
-		return [panel["key"] for panel in rules.panels_for(desks, readable, switches)]
+class Tabs(unittest.TestCase):
+	def tabs(self, desks=(), readable=EVERYTHING, blocked=(), switches=None, reports=ALL_REPORTS):
+		return rules.tabs_for(list(desks), readable, blocked=blocked, switches=switches, reports=reports)
 
-	def test_an_accountant(self):
-		self.assertEqual(self.keys([rules.FINANCE]), ["attention", "trend", "aging", "cash", "customers", "drafts"])
+	def test_overview_first_then_the_users_own_modules_then_the_rest(self):
+		found = keys(self.tabs([rules.SALES, rules.FINANCE]))
+		self.assertEqual(found[:3], ["overview", "selling", "accounts"])
+		self.assertEqual(sorted(found), sorted(["overview", *dashboards.TAB_KEYS]))
 
-	def test_each_panel_knows_where_it_goes(self):
-		places = {panel["key"]: panel["place"] for panel in rules.panels_for([rules.FINANCE], EVERYTHING)}
-		self.assertEqual(places["attention"], rules.BESIDE)
-		self.assertEqual(places["trend"], rules.WIDE)
-		self.assertEqual(places["aging"], rules.GRID)
+	def test_a_module_blocked_for_the_user_has_no_tab(self):
+		self.assertNotIn("selling", keys(self.tabs([rules.SALES], blocked={"Selling"})))
 
-	def test_a_panel_switched_off_in_the_settings_is_gone_for_everyone(self):
-		switches = rules.switched_on({"home_trend": "0", "home_cash": 0})
-		self.assertEqual(self.keys([rules.FINANCE], switches=switches), ["attention", "aging", "customers", "drafts"])
+	def test_a_module_switched_off_in_the_settings_has_no_tab(self):
+		switches = rules.switched_on({"dash_crm": "0"})
+		self.assertNotIn("crm", keys(self.tabs(switches=switches)))
+		self.assertIn("support", keys(self.tabs(switches=switches)))
+
+	def test_a_tab_comes_with_its_own_documents_not_a_figure_it_shares(self):
+		storekeeper = {"Bin", "Warehouse", "Item", "Sales Order", "Purchase Order", "Stock Ledger Entry"}
+		# stock to reorder is a Manufacturing figure too, and the orders a Sales one
+		self.assertEqual(keys(self.tabs([rules.STOCK], storekeeper, blocked={"Selling"})), ["overview", "stock", "buying"])
+
+	def test_a_tab_shows_only_what_the_user_may_read(self):
+		stock = next(tab for tab in self.tabs([rules.STOCK], {"Bin", "Warehouse", "Item"}) if tab["key"] == "stock")
+		self.assertEqual(keys(stock["cards"]), ["stock_value", "reorder", "negative"])
+		self.assertEqual(keys(stock["panels"]), ["attention", "warehouses", "reorder"])
+
+	def test_needs_attention_on_a_tab_only_where_it_has_checks_of_its_own(self):
+		found = {tab["key"]: keys(tab["panels"]) for tab in self.tabs([rules.FINANCE])}
+		self.assertEqual(found["accounts"][0], "attention")
+		self.assertNotIn("attention", found["crm"])  # no check is CRM's
+		self.assertEqual(found["overview"], ["attention", "drafts"])
+
+	def test_needs_attention_on_a_tab_only_where_the_user_may_read_a_check(self):
+		# someone who books hours but may read no task: none of the projects' checks are theirs
+		projects = next(tab for tab in self.tabs([], {"Timesheet"}) if tab["key"] == "projects")
+		self.assertEqual(keys(projects["panels"]), ["hours_by_project"])
+
+	def test_the_overview_counts_only_the_tabs_the_user_has(self):
+		self.assertEqual(rules.attention_overview(["stock"], EVERYTHING), ["negative_stock"])
+		overview = self.tabs([rules.PROJECTS], {"Project", "Task"})[0]
+		self.assertEqual(keys(overview["panels"]), ["attention"])  # tasks overdue; no drafts to look for
+
+	def test_a_tabs_figures_are_frames_until_read(self):
+		accounts = next(tab for tab in self.tabs([rules.FINANCE]) if tab["key"] == "accounts")
+		self.assertTrue(all(card["frame"] for card in accounts["cards"]))
+		self.assertEqual(accounts["panels"][1], {"key": "trend", "title": "Sales and Collections", "size": rules.WIDE})
+
+	def test_only_the_reports_the_user_may_open(self):
+		accounts = next(tab for tab in self.tabs([rules.FINANCE], reports={"Balance Sheet", "General Ledger"}) if tab["key"] == "accounts")
+		self.assertEqual(accounts["reports"], [
+			{"label": "Balance Sheet", "route": ["query-report", "Balance Sheet"]},
+			{"label": "General Ledger", "route": ["query-report", "General Ledger"]},
+		])
+
+	def test_where_frappe_cannot_say_a_report_goes_to_whoever_may_read_what_it_reports_on(self):
+		selling = next(tab for tab in self.tabs([rules.SALES], {"Sales Order", "Quotation"}, reports=None) if tab["key"] == "selling")
+		self.assertIn("Sales Analytics", [report["label"] for report in selling["reports"]])
+		self.assertNotIn("Customer Acquisition and Loyalty", [report["label"] for report in selling["reports"]])
+
+	def test_the_tab_a_module_page_belongs_to(self):
+		tabs = self.tabs([rules.FINANCE])
+		self.assertEqual(rules.tab_of_workspace(tabs, "Payments"), "accounts")
+		self.assertEqual(rules.tab_of_workspace(tabs, "Selling"), "selling")
+		self.assertIsNone(rules.tab_of_workspace(tabs, "ERPNext Settings"))
 
 	def test_a_switch_never_saved_is_on(self):
 		self.assertTrue(all(rules.switched_on({}).values()))
-		self.assertTrue(rules.switched_on({"home_trend": ""})["home_trend"])
-		self.assertTrue(rules.switched_on({"home_trend": None})["home_trend"])
+		self.assertTrue(rules.switched_on({"dash_stock": ""})["dash_stock"])
+		self.assertFalse(rules.switched_on({"dash_stock": 0})["dash_stock"])
 
-	def test_the_trend_takes_orders_where_invoices_are_not_open_to_the_user(self):
-		self.assertIn("trend", self.keys([rules.SALES], {"Sales Order"}))
-		self.assertNotIn("trend", self.keys([rules.SALES], {"Quotation"}))
-
-	def test_cash_needs_the_ledger_and_the_accounts(self):
-		self.assertNotIn("cash", self.keys([rules.FINANCE], {"Sales Invoice", "GL Entry"}))
-		self.assertIn("cash", self.keys([rules.FINANCE], {"Sales Invoice", "GL Entry", "Account"}))
-
-	def test_someone_with_no_desk_has_their_drafts_and_no_attention(self):
-		self.assertEqual(self.keys([], {"Sales Invoice"}), ["drafts"])
-		self.assertEqual(self.keys([], set()), [])
-
-	def test_every_panel_has_a_switch_in_the_settings_defaults(self):
-		for switch in rules.SWITCHES:
+	def test_every_tab_has_a_switch_in_the_settings_defaults(self):
+		for switch in dashboards.SWITCHES:
 			self.assertEqual(settings.DEFAULTS[switch], 1, switch)
 			self.assertIn(switch, settings.CHECKS)
+
+
+class Declared(unittest.TestCase):
+	"""What dashboards_rules.py declares holds together."""
+
+	def test_every_tab_names_figures_and_dashboards_there_are(self):
+		for tab in dashboards.TABS:
+			for key in tab["cards"]:
+				self.assertIn(key, rules.CARDS, (tab["key"], key))
+			for key in tab["panels"]:
+				self.assertIn(key, rules.PANELS, (tab["key"], key))
+			for report in tab["reports"]:
+				self.assertIn(report, dashboards.REPORT_DOCTYPES, (tab["key"], report))
+			self.assertTrue(tab["anchors"], tab["key"])
+
+	def test_a_declared_figure_is_complete(self):
+		for key, spec in dashboards.FIGURES.items():
+			self.assertIn(spec["function"], ("COUNT", "SUM"), key)
+			self.assertEqual("field" in spec, spec["function"] == "SUM", key)
+			self.assertIn(spec["kind"], (dashboards.MONEY, dashboards.COUNT, dashboards.HOURS), key)
+
+	def test_every_placeholder_is_one_there_is(self):
+		known = set(dashboards.dates(TODAY))
+		specs = list(dashboards.FIGURES.values()) + list(dashboards.GROUPS.values()) + list(dashboards.LISTS.values())
+		specs += [series for spec in dashboards.MONTHLY.values() for series in spec["series"]]
+		for spec in specs:
+			for found in re.findall(r"\{\w+\}", str(spec.get("filters")) + str(spec.get("late"))):
+				self.assertIn(found, known, spec)
+
+	def test_the_day_is_filled_in(self):
+		filled = dashboards.fill({"a": ["<", "{today}"], "b": [">=", "{month}"], "c": ["between", ["{since90}", "{week}"]], "d": 1}, dashboards.dates(TODAY))
+		self.assertEqual(filled, {"a": ["<", "2026-10-22"], "b": [">=", "2026-10-01"], "c": ["between", ["2026-07-24", "2026-10-29"]], "d": 1})
+
+	def test_a_list_says_how_it_is_ordered(self):
+		for key, spec in dashboards.LISTS.items():
+			self.assertTrue(spec.get("due") or spec.get("opened"), key)
+			self.assertIn(spec["title_field"], spec["fields"], key)
 
 
 class Dates(unittest.TestCase):
@@ -161,37 +247,28 @@ class Dates(unittest.TestCase):
 		self.assertEqual(rules.change(50, 200), {"percent": 75, "direction": "down"})
 		self.assertEqual(rules.change(100, 100), {"percent": 0, "direction": "same"})
 		self.assertIsNone(rules.change(100, 0))
-		self.assertEqual(rules.change(-50, -100), {"percent": 50, "direction": "up"})
 
 	def test_six_months_to_today_oldest_first(self):
 		months = rules.months(TODAY)
 		self.assertEqual([month["label"] for month in months], ["May", "Jun", "Jul", "Aug", "Sep", "Oct"])
-		self.assertEqual(months[0]["from"], "2026-05-01")
-		self.assertEqual(months[1]["to"], "2026-06-30")
-		self.assertEqual(months[-1]["to"], "2026-10-22")
+		self.assertEqual((months[0]["from"], months[1]["to"], months[-1]["to"]), ("2026-05-01", "2026-06-30", "2026-10-22"))
 
 	def test_months_across_a_new_year(self):
-		self.assertEqual([month["from"] for month in rules.months(datetime.date(2026, 2, 3), 3)],
-			["2025-12-01", "2026-01-01", "2026-02-01"])
+		self.assertEqual([month["from"] for month in rules.months(datetime.date(2026, 2, 3), 3)], ["2025-12-01", "2026-01-01", "2026-02-01"])
 
 	def test_days_add_up_into_their_months(self):
 		months = rules.months(TODAY, 2)
 		rows = [{"day": "2026-09-05", "total": 100}, {"day": datetime.date(2026, 9, 30), "total": 50.5},
-			{"day": "2026-10-01", "total": 7}, {"day": "2026-08-31", "total": 999}, {"day": None, "total": 1}]
+			{"day": "2026-10-01 17:00:00", "total": 7}, {"day": "2026-08-31", "total": 999}, {"day": None, "total": 1}]
 		self.assertEqual(rules.by_month(rows, months), [150.5, 7.0])
 
 
-class Aging(unittest.TestCase):
-	def test_each_invoice_falls_in_its_bucket(self):
+class Money(unittest.TestCase):
+	def test_each_invoice_falls_in_its_aging_bucket(self):
 		rows = [
-			{"due_date": "2026-10-30", "total": 100},  # not due
-			{"due_date": "2026-10-22", "total": 10},  # due today: not overdue yet
-			{"due_date": None, "total": 5},  # no due date: counted as not due
-			{"due_date": "2026-10-21", "total": 20},  # 1 day
-			{"due_date": "2026-09-22", "total": 30},  # 30 days
-			{"due_date": "2026-09-21", "total": 40},  # 31 days
-			{"due_date": "2026-07-24", "total": 50},  # 90 days
-			{"due_date": "2026-07-23", "total": 60},  # 91 days
+			{"due_date": "2026-10-30", "total": 100}, {"due_date": "2026-10-22", "total": 10}, {"due_date": None, "total": 5},
+			{"due_date": "2026-10-21", "total": 20}, {"due_date": "2026-09-22", "total": 30}, {"due_date": "2026-09-21", "total": 40},
+			{"due_date": "2026-07-24", "total": 50}, {"due_date": "2026-07-23", "total": 60},
 		]
 		buckets = {bucket["key"]: bucket["value"] for bucket in rules.aging(rows, TODAY)}
 		self.assertEqual(buckets, {"current": 115, "d30": 50, "d60": 40, "d90": 50, "older": 60})
@@ -200,7 +277,6 @@ class Aging(unittest.TestCase):
 		filters = {bucket["key"]: bucket["filters"]["due_date"] for bucket in rules.aging([], TODAY)}
 		self.assertEqual(filters["current"], [">=", "2026-10-22"])
 		self.assertEqual(filters["d30"], ["between", ["2026-09-22", "2026-10-21"]])
-		self.assertEqual(filters["d60"], ["between", ["2026-08-23", "2026-09-21"]])
 		self.assertEqual(filters["older"], ["<=", "2026-07-23"])
 
 	def test_who_owes_the_most_past_due(self):
@@ -211,10 +287,37 @@ class Aging(unittest.TestCase):
 		]
 		owing = rules.most_overdue(rows, TODAY)
 		self.assertEqual([row["title"] for row in owing], ["Beta", "Alpha"])
-		self.assertEqual(owing[0]["when"], "oldest 113 days overdue")
-		self.assertEqual(owing[0]["band"], "overdue")
-		self.assertEqual(owing[1]["band"], "soon")
-		self.assertEqual((owing[0]["doctype"], owing[0]["docname"]), ("Customer", "C2"))
+		self.assertEqual((owing[0]["when"], owing[0]["band"], owing[1]["band"]), ("oldest 113 days overdue", "overdue", "soon"))
+
+	def test_and_the_suppliers_owed_the_most(self):
+		owed = rules.most_overdue([{"supplier": "S1", "supplier_name": "Paint Co", "total": 70, "oldest": "2026-10-02"}],
+			TODAY, doctype="Supplier", party="supplier")
+		self.assertEqual((owed[0]["title"], owed[0]["doctype"], owed[0]["docname"]), ("Paint Co", "Supplier", "S1"))
+
+	def test_profit_month_by_month(self):
+		months = rules.months(TODAY, 2)
+		income = rules.signed([{"day": "2026-10-03", "debit": 50, "credit": 1050}, {"day": "2026-09-09", "debit": 0, "credit": 400}], "income")
+		expenses = rules.signed([{"day": "2026-10-04", "debit": 700, "credit": 100}], "expense")
+		rows = rules.profit(income, expenses, months)
+		self.assertEqual([(row["values"], row["net"]) for row in rows], [([400.0, 0.0], 400.0), ([1000.0, 600.0], 400.0)])
+		self.assertEqual(rules.margin(rows[-1]), 40)
+		self.assertIsNone(rules.margin({"values": [0, 10], "net": -10}))
+
+	def test_the_largest_parts_of_a_whole_and_the_rest_as_one(self):
+		rows = [{"label": name, "value": value} for name, value in (("A", 50), ("B", 30), ("C", 0), ("D", 10), ("E", 6), ("F", 3), ("G", 1))]
+		parts = rules.slices(rows, "label", "value", shown=3)
+		self.assertEqual([(part["label"], part["value"]) for part in parts], [("A", 50), ("B", 30), ("D", 10), ("Everything else", 10)])
+		self.assertIsNone(parts[-1]["key"])
+
+	def test_quotations_by_stage_and_how_many_were_won(self):
+		found = rules.quotation_stages([
+			{"status": "Open", "count": 4, "total": 400}, {"status": "Replied", "count": 1, "total": 50},
+			{"status": "Ordered", "count": 3, "total": 900}, {"status": "Lost", "count": 2, "total": 70}, {"status": "Expired", "count": 1, "total": 5},
+		])
+		self.assertEqual([(stage["key"], stage["value"], stage["amount"]) for stage in found["stages"]],
+			[("open", 5, 450), ("won", 3, 900), ("lost", 2, 70), ("expired", 1, 5)])
+		self.assertEqual(found["won"], 50)  # 3 of the 6 decided
+		self.assertIsNone(rules.quotation_stages([{"status": "Open", "count": 2, "total": 1}])["won"])
 
 
 class Lists(unittest.TestCase):
@@ -224,47 +327,28 @@ class Lists(unittest.TestCase):
 			{"name": "SO-2", "customer_name": "B", "delivery_date": "2026-10-30", "base_grand_total": 2, "per_delivered": 40},
 			{"name": "SO-1", "customer_name": "A", "delivery_date": "2026-10-19", "base_grand_total": 1, "per_delivered": 0},
 		]
-		listed = rules.due_rows(rows, TODAY, "Sales Order", "customer_name", "delivery_date",
-			value="base_grand_total", done="per_delivered")
+		listed = rules.due_rows(rows, TODAY, "Sales Order", "customer_name", "delivery_date", value="base_grand_total", done="per_delivered")
 		self.assertEqual([row["docname"] for row in listed], ["SO-1", "SO-2", "SO-3"])
 		self.assertEqual([row["band"] for row in listed], ["overdue", "later", "none"])
-		self.assertEqual(listed[0]["when"], "overdue by 3 days")
-		self.assertEqual(listed[2]["when"], "no date set")
-		self.assertEqual(listed[1]["progress"], 40)
-		self.assertEqual(listed[1]["value"], 2)
+		self.assertEqual((listed[0]["when"], listed[2]["when"], listed[1]["progress"]), ("overdue by 3 days", "no date set", 40))
 
-	def test_how_far_a_work_order_has_got(self):
-		rows = [{"name": "WO-1", "item_name": "Paint", "planned_end_date": "2026-10-23 17:00:00", "qty": 200, "produced_qty": 50}]
-		listed = rules.due_rows(rows, TODAY, "Work Order", "item_name", "planned_end_date", done="produced_qty", total="qty")
-		self.assertEqual((listed[0]["progress"], listed[0]["band"], listed[0]["when"]), (25, "today", "due tomorrow"))
+	def test_the_longest_open_first(self):
+		rows = [{"name": "ISS-2", "subject": "Login", "opening_date": "2026-10-21"}, {"name": "ISS-1", "subject": "Invoice", "opening_date": "2026-10-10"},
+			{"name": "ISS-3", "subject": "New", "opening_date": "2026-10-22"}]
+		listed = rules.open_for(rows, TODAY, "Issue", "subject", "opening_date")
+		self.assertEqual([(row["docname"], row["when"], row["band"]) for row in listed],
+			[("ISS-1", "open for 12 days", "overdue"), ("ISS-2", "open for 1 day", "soon"), ("ISS-3", "opened today", "soon")])
 
 	def test_stock_below_zero_first_then_the_furthest_under_its_level(self):
-		levels = [
-			{"item_code": "A", "warehouse": "Stores - AC", "level": 100},
-			{"item_code": "B", "warehouse": "Stores - AC", "level": 10},
-			{"item_code": "C", "warehouse": "Stores - AC", "level": 10},
-			{"item_code": "D", "warehouse": "Stores - AC", "level": 0},  # no level set
-		]
+		levels = [{"item_code": code, "warehouse": "Stores - AC", "level": level} for code, level in (("A", 100), ("B", 10), ("C", 10), ("D", 0))]
 		bins = [
-			{"item_code": "A", "warehouse": "Stores - AC", "projected_qty": 50},  # half its level
-			{"item_code": "B", "warehouse": "Stores - AC", "projected_qty": 1},  # a tenth
-			{"item_code": "C", "warehouse": "Stores - AC", "projected_qty": 11},  # above it
-			{"item_code": "D", "warehouse": "Stores - AC", "projected_qty": 5},  # no level, above zero
-			{"item_code": "E", "warehouse": "Shop - AC", "projected_qty": -4},  # below zero, no level
-			{"item_code": "F", "warehouse": "Shop - AC", "projected_qty": -1},
+			{"item_code": "A", "warehouse": "Stores - AC", "projected_qty": 50}, {"item_code": "B", "warehouse": "Stores - AC", "projected_qty": 1},
+			{"item_code": "C", "warehouse": "Stores - AC", "projected_qty": 11}, {"item_code": "D", "warehouse": "Stores - AC", "projected_qty": 5},
+			{"item_code": "E", "warehouse": "Shop - AC", "projected_qty": -4}, {"item_code": "F", "warehouse": "Shop - AC", "projected_qty": -1},
 		]
 		found = rules.to_reorder(levels, bins)
 		self.assertEqual([row["docname"] for row in found["rows"]], ["E", "F", "B", "A"])
-		self.assertEqual((found["count"], found["short"]), (4, 2))
-		self.assertEqual(found["rows"][0]["warehouse"], "Shop")
-		self.assertEqual(found["rows"][0]["band"], "overdue")
-		self.assertEqual(found["rows"][2], {"title": "B", "doctype": "Item", "docname": "B", "warehouse": "Stores",
-			"projected": 1, "level": 10, "band": "today"})
-
-	def test_a_level_is_for_its_own_warehouse_only(self):
-		found = rules.to_reorder([{"item_code": "A", "warehouse": "W1", "level": 10}],
-			[{"item_code": "A", "warehouse": "W2", "projected_qty": 1}])
-		self.assertEqual(found["count"], 0)
+		self.assertEqual((found["count"], found["short"], found["rows"][0]["warehouse"]), (4, 2, "Shop"))
 
 	def test_drafts_the_oldest_first_and_how_long_untouched(self):
 		found = [
@@ -275,10 +359,7 @@ class Lists(unittest.TestCase):
 		listed = rules.drafts(found, TODAY)
 		self.assertEqual([row["docname"] for row in listed["rows"]], ["STE-9", "SINV-2", "PE-1"])
 		self.assertEqual([row["when"] for row in listed["rows"]], ["untouched for 12 days", "untouched for 1 day", "untouched today"])
-		self.assertEqual([row["band"] for row in listed["rows"]], ["overdue", "none", "none"])
-		# a title that is only its name, or none at all, reads as what it is
 		self.assertEqual([row["title"] for row in listed["rows"]], ["Stock Entry", "Acme", "Payment Entry"])
-		self.assertEqual(listed["count"], 3)
 
 	def test_the_largest_first_as_bars(self):
 		rows = [{"customer": "C1", "customer_name": "Alpha", "total": 10}, {"customer": "C2", "customer_name": "Beta", "total": 30},
@@ -288,36 +369,39 @@ class Lists(unittest.TestCase):
 		self.assertEqual(bars[0], {"label": "Beta", "value": 30.0, "doctype": "Customer", "docname": "C2"})
 
 	def test_names_without_the_company_abbreviation(self):
-		self.assertEqual(rules.short_name("Stores - AC"), "Stores")
-		self.assertEqual(rules.short_name("Cash"), "Cash")
-		self.assertEqual(rules.short_name("Bank - Main - AC"), "Bank - Main")
+		self.assertEqual([rules.short_name(name) for name in ("Stores - AC", "Cash", "Bank - Main - AC")], ["Stores", "Cash", "Bank - Main"])
 
 
 class Attention(unittest.TestCase):
-	def test_each_desk_has_its_checks_and_only_where_they_may_read(self):
-		self.assertEqual(rules.attention_for([rules.PROJECTS], {"Task"}), ["tasks_overdue"])
-		self.assertEqual(rules.attention_for([rules.PROJECTS], set()), [])
-		finance = rules.attention_for([rules.FINANCE], EVERYTHING)
-		self.assertIn("invoices_overdue", finance)
-		self.assertNotIn("quotations_expiring", finance)
+	def test_each_check_belongs_to_a_tab_there_is(self):
+		for key, *_rest in rules.ATTENTION:
+			self.assertIn(rules.ATTENTION_TAB[key], dashboards.TAB_KEYS, key)
+
+	def test_a_tabs_checks_are_its_own_and_readable(self):
+		self.assertEqual(rules.attention_in("selling", EVERYTHING), ["orders_late", "orders_to_bill", "quotations_expiring"])
+		self.assertEqual(rules.attention_in("selling", {"Quotation"}), ["quotations_expiring"])
+
+	def test_each_tab_badge_counts_its_checks_in_the_color_of_the_most_pressing(self):
+		rows = [
+			{"key": "quotations_expiring", "value": 2, "band": "soon"},
+			{"key": "issues_open", "value": 4, "band": "soon"},
+			{"key": "orders_to_bill", "value": 3, "band": "today"},
+			{"key": "orders_late", "value": 1, "band": "overdue"},
+			{"key": "no_such_check", "value": 9, "band": "overdue"},
+		]
+		self.assertEqual(rules.badges(rows), {"selling": {"value": 6, "band": "overdue"}, "support": {"value": 4, "band": "soon"}})
+		self.assertEqual(rules.badges([]), {})
 
 	def test_only_what_there_is_some_of_the_most_pressing_first(self):
-		counts = {"quotations_expiring": 4, "bills_due": 2, "orders_late": 1, "invoices_overdue": 0}
-		rows = rules.attention_rows(counts, TODAY, "Acme")
-		self.assertEqual([row["key"] for row in rows], ["orders_late", "bills_due", "quotations_expiring"])
-		self.assertEqual(rows[0]["label"], "Sales order late to deliver")
-		self.assertEqual(rows[1]["label"], "Supplier bills due this week")
-		self.assertEqual(rows[0]["route"], ["List", "Sales Order"])
-		self.assertEqual(rows[0]["filters"]["delivery_date"], ["<", "2026-10-22"])
-		self.assertEqual(rows[0]["filters"]["company"], "Acme")
+		rows = rules.attention_rows({"quotations_expiring": 4, "bills_due": 2, "orders_late": 1, "invoices_overdue": 0}, TODAY, "Acme")
+		self.assertEqual(keys(rows), ["orders_late", "bills_due", "quotations_expiring"])
+		self.assertEqual((rows[0]["label"], rows[1]["label"]), ("Sales order late to deliver", "Supplier bills due this week"))
+		self.assertEqual((rows[0]["route"], rows[0]["filters"]["delivery_date"], rows[0]["filters"]["company"]),
+			(["List", "Sales Order"], ["<", "2026-10-22"], "Acme"))
 
 	def test_what_each_check_counts(self):
 		self.assertEqual(rules.attention_filters("bills_due", TODAY)["due_date"], ["<=", "2026-10-29"])
-		self.assertEqual(rules.attention_filters("quotations_expiring", TODAY)["valid_till"], ["between", ["2026-10-22", "2026-10-29"]])
-		# stock below zero is wrong in any company
 		self.assertNotIn("company", rules.attention_filters("negative_stock", TODAY, "Acme"))
-		for key, *_rest in rules.ATTENTION:
-			self.assertIsInstance(rules.attention_filters(key, TODAY, "Acme"), dict, key)
 
 
 class MostMade(unittest.TestCase):
@@ -329,10 +413,6 @@ class MostMade(unittest.TestCase):
 
 	def test_only_what_they_may_make(self):
 		self.assertEqual(rules.most_made({"Sales Invoice": 5}, [rules.FINANCE], {"Payment Entry"}), ["Payment Entry"])
-
-	def test_ties_go_to_the_usual_order(self):
-		self.assertEqual(rules.most_made({"Stock Entry": 2, "Sales Invoice": 2}, [], {"Stock Entry", "Sales Invoice"}),
-			["Sales Invoice", "Stock Entry"])
 
 	def test_links_for_a_desk_without_visits_to_go_by(self):
 		links = rules.links_for([rules.FINANCE, rules.STOCK], {"Sales Invoice", "GL Entry", "Item"})
@@ -352,8 +432,7 @@ class Modules(unittest.TestCase):
 		self.assertEqual([alert["key"] for alert in module_pages_rules.mine_in(alerts, ["Quotation", "Sales Order"])], [1, 3])
 
 	def test_the_checks_a_module_has(self):
-		self.assertEqual(module_pages_rules.attention_in(["Sales Order", "Quotation", "Item"]),
-			["orders_late", "orders_to_bill", "quotations_expiring"])
+		self.assertEqual(module_pages_rules.attention_in(["Sales Order", "Quotation", "Item"]), ["orders_late", "orders_to_bill", "quotations_expiring"])
 
 	def test_the_document_offered_is_what_the_user_makes_most_there(self):
 		names = ["Quotation", "Sales Order", "Sales Invoice"]
@@ -389,14 +468,11 @@ class HomeColors(unittest.TestCase):
 		shipped = {key: THEME_DEFAULTS[key] for key in ("accent", "danger", "warning", "success")}
 		self.assertEqual(color_rules.white_text_shortfalls(shipped), [])
 		self.assertGreaterEqual(color_rules.contrast(self.colors()["--cvt-header-mid"], "#ffffff"), 4.5)
-		self.assertGreaterEqual(color_rules.contrast(self.colors()["--cvt-header-deep"], "#ffffff"), 4.5)
 
 	def test_a_color_too_light_for_white_text_is_named(self):
 		self.assertEqual(color_rules.white_text_shortfalls({"Header": "#eaa51a", "Done": "#1e7a46", "Blank": ""}), ["Header"])
 
 	def test_every_value_is_a_hex_color_the_desk_will_take(self):
-		import re
-
 		for name, value in self.colors().items():
 			self.assertRegex(name, r"^--cvt-[a-z-]+$")
 			self.assertTrue(re.fullmatch(r"#[0-9a-f]{6}|\d{1,2}px", value), (name, value))

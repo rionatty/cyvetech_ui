@@ -31,7 +31,8 @@
 				const started = Date.now();
 				const wait = () => {
 					if (frame.contentWindow && frame.contentWindow.test_summary) return resolve();
-					if (Date.now() - started > 12000) {
+					// generous: a browser holds back the timers of a tab out of sight, and a slow case is not a stuck one
+					if (Date.now() - started > 30000) {
 						window.results.push({ label: `${name}: finished`, ok: false, got: "did not finish" });
 						return resolve();
 					}

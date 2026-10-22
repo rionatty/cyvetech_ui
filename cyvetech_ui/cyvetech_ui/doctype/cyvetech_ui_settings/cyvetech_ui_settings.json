@@ -37,19 +37,18 @@
   "module_pages_enabled",
   "column_break_home",
   "home_help",
-  "section_home_panels",
-  "home_attention",
-  "home_trend",
-  "home_aging",
-  "home_cash",
-  "home_customers",
-  "home_deliver",
-  "column_break_home_panels",
-  "home_receive",
-  "home_reorder",
-  "home_production",
-  "home_tasks",
-  "home_drafts",
+  "section_home_tabs",
+  "dash_accounts",
+  "dash_selling",
+  "dash_buying",
+  "dash_stock",
+  "dash_manufacturing",
+  "column_break_home_tabs",
+  "dash_projects",
+  "dash_crm",
+  "dash_support",
+  "dash_assets",
+  "dash_quality",
   "tab_charts",
   "apply_chart_colors",
   "vary_single_series",
@@ -258,14 +257,14 @@
   },
   {
    "default": "1",
-   "description": "A greeting, the day's figures, what waits for each user, what needs attention in the business, and the modules down the left, on the desk with Frappe's own tiles. Off: the desk as Frappe draws it.",
+   "description": "A greeting, what waits for each user, a tab of dashboards for each module assigned to them, and the modules down the left, on the desk with Frappe's own tiles. Off: the desk as Frappe draws it.",
    "fieldname": "home_enabled",
    "fieldtype": "Check",
    "label": "Show the Home Dashboard on the Desk"
   },
   {
    "default": "1",
-   "description": "Each module opens under a header with its picture, its menu's groups, what needs attention and what waits for the user in it, and a button to make the document most made there, over ERPNext's own cards. Off: Frappe's own module pages.",
+   "description": "Each module opens under a header with its picture, its menu's groups, what needs attention and what waits for the user in it, a button to make the document most made there, and one to open the module's dashboards on the desk, over ERPNext's own cards. Off: Frappe's own module pages.",
    "fieldname": "module_pages_enabled",
    "fieldtype": "Check",
    "label": "Give Each Module the Home's Look"
@@ -277,94 +276,87 @@
   {
    "fieldname": "home_help",
    "fieldtype": "HTML",
-   "options": "<div class=\"text-muted small\"><p><b>Whose figures.</b> Each user's home follows what their roles are about: accounts users see sales, what is owed both ways and the cash; sales users their orders and quotations; purchase users what is on its way; stock users the stock value and what to reorder; manufacturing, projects and support their own. Someone with several roles gets them all, the money first. Every figure counts only what that user may read, so User Permissions narrow it as they narrow the lists.</p><p><b>The company.</b> Money is the user's default company's, in its currency.</p><p><b>Fresh enough.</b> The figures are kept for five minutes. <b>Refresh</b> on the home reads them again.</p></div>"
+   "options": "<div class=\"text-muted small\"><p><b>Whose figures.</b> The overview's figures follow what each user's roles are about: accounts users see sales, what is owed both ways and the cash; sales users their orders and quotations; purchase users what is on its way; stock users the stock value and what to reorder; manufacturing, projects and support their own. Someone with several roles gets them all, the money first. Every figure counts only what that user may read, so User Permissions narrow it as they narrow the lists.</p><p><b>In tabs.</b> Under the greeting, a tab for each module: Overview, then Accounts, Sales, Purchasing, Stock, Manufacturing, Projects, CRM, Support, Assets and Quality, each with its figures, its dashboards and its reports. Each user gets the tabs of the modules assigned to them, their own first, and a tab's figures are read only once it is opened.</p><p><b>The company.</b> Money is the user's default company's, in its currency.</p><p><b>Fresh enough.</b> A tab's figures are kept for five minutes. <b>Refresh</b>, beside the tab's heading, reads them again.</p></div>"
   },
   {
-   "description": "Untick a panel to take it off everyone's home. Each shows only to the users whose roles it is for.",
-   "fieldname": "section_home_panels",
+   "description": "A tab of dashboards for each module, on the desk. Each user gets a module's tab only where the module is assigned to them (the Modules on their user, or their Module Profile) and they may read its documents, with their own modules first. Overview is on every desk. Untick a module to take its tab off everyone's desk.",
+   "fieldname": "section_home_tabs",
    "fieldtype": "Section Break",
-   "label": "Panels"
+   "label": "Dashboard Tabs"
   },
   {
    "default": "1",
-   "description": "Late orders and deliveries, overdue invoices, bills due this week, stock below zero, late work orders and tasks: each counted, and each opening its list.",
-   "fieldname": "home_attention",
+   "description": "Sales, what is owed both ways, cash, profit and loss, expenses, and the financial statements.",
+   "fieldname": "dash_accounts",
    "fieldtype": "Check",
-   "label": "Needs Attention"
+   "label": "Accounts"
   },
   {
    "default": "1",
-   "description": "Six months of what was billed and what came in. Users who may read sales orders but not invoices see what was ordered.",
-   "fieldname": "home_trend",
+   "description": "Orders and billing, top customers and items, territories, quotations and orders to deliver.",
+   "fieldname": "dash_selling",
    "fieldtype": "Check",
-   "label": "Sales and Collections"
+   "label": "Sales"
   },
   {
    "default": "1",
-   "description": "What customers owe, by days overdue, and who owes the most past due.",
-   "fieldname": "home_aging",
+   "description": "Purchases by month, what is on its way, top suppliers, material requests and what is owed.",
+   "fieldname": "dash_buying",
    "fieldtype": "Check",
-   "label": "Receivables Aging"
+   "label": "Purchasing"
   },
   {
    "default": "1",
-   "description": "The balance of each bank and cash account today.",
-   "fieldname": "home_cash",
+   "description": "Stock value, stock in and out, warehouses, what to reorder, and deliveries and receipts.",
+   "fieldname": "dash_stock",
    "fieldtype": "Check",
-   "label": "Cash and Bank"
+   "label": "Stock"
   },
   {
    "default": "1",
-   "description": "By what was billed this month, or ordered, for users who may not read invoices.",
-   "fieldname": "home_customers",
+   "description": "Work orders due and completed, job cards on the floor, and production reports.",
+   "fieldname": "dash_manufacturing",
    "fieldtype": "Check",
-   "label": "Top Customers This Month"
+   "label": "Manufacturing"
   },
   {
-   "default": "1",
-   "description": "Open sales orders, the soonest delivery date first.",
-   "fieldname": "home_deliver",
-   "fieldtype": "Check",
-   "label": "Orders to Deliver"
-  },
-  {
-   "fieldname": "column_break_home_panels",
+   "fieldname": "column_break_home_tabs",
    "fieldtype": "Column Break"
   },
   {
    "default": "1",
-   "description": "Open purchase orders, the soonest expected first.",
-   "fieldname": "home_receive",
+   "description": "Open projects and how far along each is, tasks due and hours by project.",
+   "fieldname": "dash_projects",
    "fieldtype": "Check",
-   "label": "Purchases to Receive"
+   "label": "Projects"
   },
   {
    "default": "1",
-   "description": "Items at or under their reorder level, and any going below zero.",
-   "fieldname": "home_reorder",
+   "description": "Leads, open opportunities and their stages, and what is closing soon.",
+   "fieldname": "dash_crm",
    "fieldtype": "Check",
-   "label": "Stock to Reorder"
+   "label": "CRM"
   },
   {
    "default": "1",
-   "description": "Open work orders, the soonest planned end first.",
-   "fieldname": "home_production",
+   "description": "Open issues, by priority and how long each has been open.",
+   "fieldname": "dash_support",
    "fieldtype": "Check",
-   "label": "Work Orders Due"
+   "label": "Support"
   },
   {
    "default": "1",
-   "description": "Open project tasks, the soonest end date first.",
-   "fieldname": "home_tasks",
+   "description": "Asset value by category and maintenance due.",
+   "fieldname": "dash_assets",
    "fieldtype": "Check",
-   "label": "Tasks Due"
+   "label": "Assets"
   },
   {
    "default": "1",
-   "description": "Each user's own drafts from the last 60 days, the oldest first.",
-   "fieldname": "home_drafts",
+   "description": "Inspections accepted and rejected, and open non-conformances.",
+   "fieldname": "dash_quality",
    "fieldtype": "Check",
-   "label": "Your Drafts"
+   "label": "Quality"
   },
   {
    "fieldname": "tab_charts",
@@ -575,7 +567,7 @@
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2026-10-22 12:00:00.000000",
+ "modified": "2026-10-23 09:00:00.000000",
  "modified_by": "Administrator",
  "module": "CyveTech UI",
  "name": "CyveTech UI Settings",

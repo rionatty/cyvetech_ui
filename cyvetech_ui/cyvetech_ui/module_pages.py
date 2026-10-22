@@ -11,7 +11,8 @@ module_pages_rules.py.
 
 	summary   for one workspace: what waits for the logged-in user among the
 	          documents its page and menu open, how many of them need
-	          attention, and the document its header offers to make
+	          attention, the document its header offers to make, and the
+	          desk's tab of dashboards for the module, where the user has it
 
 WHOSE ALERTS
 
@@ -46,6 +47,7 @@ def summary(workspace: str):
 	reader = home.Reader(day, company, readable, desks)
 	counts = {key: home._or(0, reader.attention_count, key, title="attention: " + key) for key in rules.attention_in(names)}
 	made = home._or([], home._made, user, desks, day)
+	tabs = home._or([], home._tabs, user, desks, readable, title="module tabs")
 	return {
 		"workspace": workspace,
 		"waiting": home_rules.waiting(mine, rules.SHOWN),
@@ -53,6 +55,8 @@ def summary(workspace: str):
 		"doctypes": rules.doctypes(alert.get("doctype") for alert in mine),
 		"attention": home_rules.attention_rows(counts, day, company)[: rules.SHOWN_ATTENTION],
 		"action": rules.action_of(workspace, made, names),
+		# the desk's tab of dashboards for this module, where the user has it
+		"dashboard": home_rules.tab_of_workspace(tabs, workspace),
 	}
 
 

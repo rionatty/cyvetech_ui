@@ -355,6 +355,30 @@ def install():
 
 	fake.has_permission = has_permission
 	fake.get_cached_value = lambda doctype, name, fieldname: fake.db.get_value(doctype, name, fieldname)
+
+	class UserRecord:
+		"""A User as far as its blocked modules: those in fake.blocked for it."""
+
+		def __init__(self, name):
+			self.name = name
+
+		def get_blocked_modules(self):
+			return list(fake.blocked.get(self.name, ()))
+
+	fake.get_cached_doc = lambda doctype, name=None: UserRecord(name) if doctype == "User" else fake.docs[(doctype, name)]
+
+	# frappe.desk.desk_views.DeskViews, as far as the reports a user may open: fake.allowed_reports
+	desk = types.ModuleType("frappe.desk")
+	desk_views = types.ModuleType("frappe.desk.desk_views")
+
+	class DeskViews:
+		@classmethod
+		def get_allowed_report_names(cls, cache=False, user=None):
+			return set(fake.allowed_reports)
+
+	desk_views.DeskViews = DeskViews
+	desk.desk_views = desk_views
+	fake.desk = desk
 	defaults = types.ModuleType("frappe.defaults")
 	defaults.get_user_default = lambda key, user=None: fake.user_defaults.get(key)
 	fake.defaults = defaults
@@ -436,17 +460,22 @@ def install():
 	document.Document = Document
 	model.document = document
 
-	sys.modules.update({
+	fake._modules = {
 		"frappe": fake,
 		"frappe.utils": utils,
 		"frappe.model": model,
 		"frappe.model.document": document,
-	})
+		"frappe.desk": desk,
+		"frappe.desk.desk_views": desk_views,
+	}
 	reset(fake)
 	return fake
 
 
 def reset(fake):
+	# This stand-in is the frappe of the test about to run, as a bench has only one: code that imports
+	# from frappe as it runs (frappe.desk.desk_views, in home.py) finds this one, not the last installed.
+	sys.modules.update(fake._modules)
 	fake.session = _dict(user="jane@example.com")
 	fake.today = "2026-09-28"
 	fake.now = datetime.datetime(2026, 9, 28, 9, 0)
@@ -454,6 +483,8 @@ def reset(fake):
 	fake.readable = set()  # the doctypes the session user may read (get_list, has_permission)
 	fake.creatable = set()  # and may create
 	fake.user_defaults = {}
+	fake.blocked = {}  # user: [the modules blocked for them]
+	fake.allowed_reports = set()  # the reports the session user may open
 	fake.cached = {}
 	fake.cache_seconds = {}
 	fake.title_fields = {}

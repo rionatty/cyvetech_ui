@@ -146,6 +146,8 @@
 			{ key: "quotations_expiring", label: "Quotations expiring this week", value: 4, band: "soon", route: ["List", "Quotation"], filters: { docstatus: 1 } },
 		],
 		action: "Quotation",
+		// the module's tab of dashboards on the desk
+		dashboard: "selling",
 	};
 
 	const tick = () => new Promise((resolve) => setTimeout(resolve, 0));
@@ -168,6 +170,7 @@
 		check("the groups of its menu, a heading with nothing under it left out", text(".cvt-mod-hero p") === "POS · Setup", text(".cvt-mod-hero p"));
 		check("while what waits is on its way, a frame", $q(".cvt-mod-chip.cvt-mod-asking"), "no frame");
 		check("its usual document to make, until the server says what this user makes there", text(".cvt-mod-action") === "New Sales Order", text(".cvt-mod-action"));
+		check("no way to its dashboards until the server says the user has them", !$q(".cvt-mod-board"), text(".cvt-mod-hero-side"));
 		const glyph = $q(".cvt-mod-glyph > i");
 		check("its picture: the app's light picture as a mask, drawn in the theme's colors",
 			glyph && glyph.style.getPropertyValue("--cvt-m-glyph").includes("/assets/erpnext/icons/desktop_icons/subtle/selling.svg") &&
@@ -192,6 +195,8 @@
 		check("the panel of what waits, under the header", text(".cvt-mod-panel h3") === "Waiting for You" && text(".cvt-mod-panel .cvt-mod-row-title") === "Approve SO-1", text(".cvt-mod-panel"));
 		check("the header in the header color picked", css(".cvt-mod-hero", "background-image").includes(HEADER), css(".cvt-mod-hero", "background-image"));
 		check("the button the highlight", css(".cvt-mod-action", "background-color") === GOLD, css(".cvt-mod-action", "background-color"));
+		check("a way to the module's dashboards beside it, its picture in the highlight", text(".cvt-mod-board") === "Dashboard" &&
+			css(".cvt-mod-board .cvt-mod-icon", "color") === GOLD, text(".cvt-mod-hero-side"));
 
 		// ERPNext's own blocks, as the home draws its panels
 		check("a card of links: a hairline in the line color", css("#links", "border-top-color") === LINE, css("#links", "border-top-color"));
@@ -207,6 +212,8 @@
 		check("a count opens its list on what it counts", same(last_route(), { route: ["List", "Sales Order"], options: SELLING.attention[0].filters }), last_route());
 		click($q(".cvt-mod-action"));
 		check("the button makes a new one", same(frappe.made, ["Quotation"]), frappe.made);
+		click($q(".cvt-mod-board"));
+		check("Dashboard opens the desk on the module's tab", same(last_route(), { route: "/desk", options: { dashboard: "selling" } }), last_route());
 		click($all(".cvt-mod-near")[1]);
 		check("the next step opens as its tile would, with its own menu", same(last_route(), { route: "/desk/buying", options: { sidebar: "Buying" } }), last_route());
 		click($all(".cvt-mod-tab")[1]);
@@ -237,6 +244,7 @@
 		answer("Invoicing", { workspace: "Invoicing", waiting: { tasks: 0, unread: 0, items: [], notes: [] }, doctypes: [], attention: [], action: null });
 		await settle();
 		check("nothing waiting: no panel", !$q(".cvt-mod-panel"), "a panel");
+		check("a module the user has no dashboards of offers none", !$q(".cvt-mod-board"), text(".cvt-mod-hero-side"));
 		check("its usual document", text(".cvt-mod-action") === "New Sales Invoice", text(".cvt-mod-action"));
 
 		// a module outside the flow

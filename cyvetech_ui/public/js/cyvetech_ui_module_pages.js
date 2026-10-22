@@ -57,6 +57,7 @@
 		folder:
 			'<path d="M4 7.5A1.5 1.5 0 0 1 5.5 6h4l2 2.2h7A1.5 1.5 0 0 1 20 9.7v8.8a1.5 1.5 0 0 1-1.5 1.5h-13A1.5 1.5 0 0 1 4 18.5z"/>',
 		attention: '<path d="M12 4l9 16H3z"/><path d="M12 10v4.2M12 17.2v.3"/>',
+		board: '<path d="M5 19V10M10 19V5M15 19v-7M20 19v-11"/>',
 	};
 
 	function icon(name) {
@@ -226,6 +227,11 @@
 			? `<button type="button" class="cvt-mod-action" data-cvt-mod="new" data-doctype="${esc(doctype)}">${icon("plus")}` +
 			  `<span>${esc(__("New {0}", [__(doctype)]))}</span></button>`
 			: "";
+		// the module's tab of dashboards on the desk, where the user has it
+		const board = data && data.dashboard
+			? `<button type="button" class="cvt-mod-board" data-cvt-mod="board">${icon("board")}` +
+			  `<span>${esc(__("Dashboard"))}</span></button>`
+			: "";
 		return (
 			`<section class="cvt-mod-hero">${picture(page)}` +
 			`<div class="cvt-mod-hero-text"><h2>${esc(__(page.title || name))}</h2>` +
@@ -233,7 +239,7 @@
 			flags(data) +
 			(stage ? track(stage) : "") +
 			`</div>` +
-			(chip || make ? `<div class="cvt-mod-hero-side">${chip}${make}</div>` : "") +
+			(chip || make || board ? `<div class="cvt-mod-hero-side">${chip}${board}${make}</div>` : "") +
 			`</section>`
 		);
 	}
@@ -352,6 +358,14 @@
 			const item = (list || [])[index];
 			if (item && item.doctype && item.docname) frappe.set_route("Form", item.doctype, item.docname);
 		} else if (what === "all") all(element.getAttribute("data-list"), page.name);
+		else if (what === "board") {
+			// the desk, opened on this module's tab of dashboards
+			const data = data_of(page.name);
+			if (data && data.dashboard) {
+				frappe.route_options = { dashboard: data.dashboard };
+				frappe.set_route("/desk");
+			}
+		}
 	}
 
 	// where the header goes: first in Frappe's workspace body, which Frappe only ever adds its skeleton to and

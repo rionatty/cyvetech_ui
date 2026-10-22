@@ -29,6 +29,7 @@
 	padding: 0 20px;
 	box-sizing: border-box;
 	font-feature-settings: "tnum";
+	container: cvt-home / inline-size;
 }
 html[data-theme="dark"] .cvt-home {
 	--cvt-h-line: var(--border-color, #343b46);
@@ -84,7 +85,11 @@ html[data-theme="dark"] .cvt-home {
 .cvt-home .cvt-home-shortcut { transition: transform 0.12s ease, box-shadow 0.12s ease, background 0.12s ease; }
 
 /* the figures */
-.cvt-home-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 14px; margin-top: 16px; }
+.cvt-home-cards { display: flex; flex-wrap: wrap; gap: 14px; }
+.cvt-home-cards > .cvt-home-card { flex: 1 1 calc(25% - 11px); }
+@container cvt-home (max-width: 680px) {
+	.cvt-home-cards > .cvt-home-card { flex-basis: calc(50% - 7px); }
+}
 .cvt-home .cvt-home-card {
 	display: flex; flex-direction: column; gap: 4px; padding: 16px 18px 15px; border-radius: 14px; min-width: 0;
 	background: var(--cvt-h-card); border: 1px solid var(--cvt-h-line); position: relative; overflow: hidden;
@@ -132,12 +137,15 @@ html[data-theme="dark"] .cvt-home {
 .cvt-home .cvt-home-shortcut .cvt-home-icon { width: 14px; height: 14px; color: var(--cvt-accent); }
 
 /* the panels */
-.cvt-home-panels { display: grid; grid-template-columns: minmax(0, 1.75fr) minmax(0, 1fr); gap: 14px; margin-top: 14px; align-items: start; }
-.cvt-home-panels.cvt-home-one { grid-template-columns: minmax(0, 1fr); }
-.cvt-home-panels.cvt-home-two { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-.cvt-home-panels.cvt-home-three { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.cvt-home-grid { display: grid; grid-template-columns: minmax(0, 1fr); grid-auto-flow: row dense; gap: 14px; margin-top: 14px; }
+@container cvt-home (min-width: 660px) {
+	.cvt-home-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+	.cvt-home-grid > .cvt-home-wide { grid-column: span 2; }
+}
+@container cvt-home (min-width: 1040px) {
+	.cvt-home-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
 .cvt-home-panel { background: var(--cvt-h-card); border: 1px solid var(--cvt-h-line); border-radius: 14px; overflow: hidden; min-width: 0; }
-.cvt-home-panel.cvt-home-wide { margin-top: 14px; }
 .cvt-home-panel header {
 	display: flex; align-items: center; gap: 10px; padding: 13px 16px; border-bottom: 1px solid var(--cvt-h-line); flex-wrap: wrap;
 }
@@ -226,7 +234,7 @@ html[data-theme="dark"] .cvt-home {
 .cvt-home-legend .cvt-home-legend-figure { margin-left: auto; }
 
 /* when the figures were read */
-.cvt-home-stamp { display: flex; justify-content: flex-end; align-items: center; gap: 8px; margin: 14px 2px 0; font-size: 12px; color: var(--cvt-h-muted); }
+.cvt-home-stamp { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: var(--cvt-h-muted); }
 .cvt-home .cvt-home-refresh { display: inline-flex; align-items: center; gap: 4px; padding: 4px 9px; border-radius: 8px; font-weight: 600; color: var(--cvt-accent); }
 .cvt-home .cvt-home-refresh:hover { background: var(--cvt-h-wash); }
 .cvt-home .cvt-home-refresh .cvt-home-icon { width: 14px; height: 14px; }
@@ -241,6 +249,82 @@ html[data-theme="dark"] .cvt-home {
 }
 .cvt-home-hero .cvt-home-bone { background: linear-gradient(90deg, rgba(255, 255, 255, 0.14), rgba(255, 255, 255, 0.3), rgba(255, 255, 255, 0.14)); background-size: 200% 100%; }
 @keyframes cvt-home-shine { from { background-position: 200% 0; } to { background-position: -200% 0; } }
+
+/* ── The tabs of dashboards ─────────────────────────────────────────────────
+   A tab for each module the user has, the overview first. The bar stays in
+   sight under the desk's own bar while the dashboards scroll under it, and
+   scrolls sideways where the tabs are more than its width. */
+
+.cvt-home-tabbar {
+	position: sticky; top: var(--desktop-navbar-height, 52px); z-index: 3;
+	display: flex; gap: 4px; margin: 16px 0 0; padding: 6px; overflow-x: auto; scrollbar-width: none;
+	background: var(--cvt-h-card); border: 1px solid var(--cvt-h-line); border-radius: 14px;
+	box-shadow: 0 6px 18px color-mix(in srgb, var(--cvt-header) 8%, transparent);
+}
+.cvt-home-tabbar::-webkit-scrollbar { display: none; }
+.cvt-home .cvt-home-tabbtn {
+	display: inline-flex; align-items: center; gap: 7px; flex: none; padding: 8px 13px; border-radius: 10px;
+	font-size: 13px; font-weight: 600; white-space: nowrap; color: var(--cvt-h-muted);
+	transition: background 0.12s ease, color 0.12s ease;
+}
+.cvt-home .cvt-home-tabbtn .cvt-home-icon { width: 16px; height: 16px; }
+.cvt-home .cvt-home-tabbtn:hover { background: var(--cvt-h-wash); color: var(--cvt-h-ink); }
+.cvt-home .cvt-home-tabbtn.cvt-on {
+	background: var(--cvt-header); color: var(--cvt-on-header);
+	box-shadow: 0 4px 12px color-mix(in srgb, var(--cvt-header) 30%, transparent);
+}
+.cvt-home .cvt-home-tabbtn.cvt-on .cvt-home-icon { color: var(--cvt-highlight); }
+.cvt-home-badge {
+	display: inline-grid; place-items: center; min-width: 20px; height: 18px; padding: 0 6px; border-radius: 99px;
+	font-size: 11px; font-weight: 700; font-style: normal; color: #ffffff; background: var(--cvt-band, var(--cvt-band-none));
+}
+
+.cvt-home-tabhead { display: flex; align-items: flex-end; justify-content: space-between; flex-wrap: wrap; gap: 10px 16px; margin: 18px 2px 12px; }
+.cvt-home-tabhead h3 { margin: 0; font-size: 18px; line-height: 1.3; font-weight: 700; color: var(--cvt-h-ink); }
+.cvt-home-tabhead p { margin: 2px 0 0; font-size: 12.5px; color: var(--cvt-h-muted); }
+.cvt-home-tabhead-side { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; }
+.cvt-home .cvt-home-into {
+	display: inline-flex; align-items: center; gap: 6px; padding: 7px 12px; border-radius: 10px;
+	font-size: 12.5px; font-weight: 600; color: var(--cvt-h-ink); background: var(--cvt-h-card); border: 1px solid var(--cvt-h-line);
+}
+.cvt-home .cvt-home-into:hover { border-color: color-mix(in srgb, var(--cvt-accent) 45%, var(--cvt-h-line)); }
+.cvt-home .cvt-home-into .cvt-home-icon { width: 15px; height: 15px; color: var(--cvt-accent); }
+
+/* the reports a decision is made from */
+.cvt-home .cvt-home-report .cvt-home-row-title { font-weight: 500; }
+.cvt-home .cvt-home-report:hover .cvt-home-row-title { color: var(--cvt-accent); }
+
+/* a ring of a whole's parts, each part listed beside it with its share */
+.cvt-home-ring-row { display: flex; align-items: center; flex-wrap: wrap; gap: 14px 18px; padding: 12px 12px 8px; }
+.cvt-home-donut { position: relative; flex: none; width: 132px; height: 132px; }
+.cvt-home-donut-ring {
+	position: absolute; inset: 0; border-radius: 50%;
+	-webkit-mask: radial-gradient(circle, transparent 56%, #000 57%); mask: radial-gradient(circle, transparent 56%, #000 57%);
+}
+.cvt-home-donut-middle { position: absolute; inset: 0; display: grid; place-content: center; text-align: center; line-height: 1.2; }
+.cvt-home-donut-middle b { font-size: 15px; color: var(--cvt-h-ink); }
+.cvt-home-donut-middle small { font-size: 11px; color: var(--cvt-h-muted); }
+.cvt-home-slices { flex: 1 1 190px; min-width: 0; display: grid; gap: 1px; }
+.cvt-home .cvt-home-slice {
+	display: grid; grid-template-columns: 10px minmax(0, 1fr) auto 36px; align-items: center; gap: 8px;
+	width: 100%; padding: 6px 8px; border-radius: 8px;
+}
+.cvt-home .cvt-home-slice:hover { background: var(--cvt-h-wash); }
+.cvt-home-slice > i { width: 10px; height: 10px; border-radius: 3px; }
+.cvt-home-slice b { font-size: 13px; color: var(--cvt-h-ink); white-space: nowrap; }
+.cvt-home-slice small { text-align: right; font-size: 12px; color: var(--cvt-h-muted); }
+
+/* the quotations' stages: how many, and their worth */
+.cvt-home .cvt-home-bar.cvt-home-stage { grid-template-columns: minmax(0, 76px) minmax(0, 1fr) auto auto; }
+.cvt-home-stage small { min-width: 64px; text-align: right; font-size: 12px; color: var(--cvt-h-muted); white-space: nowrap; }
+
+/* a project, and how far along it is */
+.cvt-home-progress .cvt-home-bar-track { margin-top: 6px; height: 6px; }
+.cvt-home-percent { min-width: 40px; text-align: right; font-size: 13px; color: var(--cvt-h-ink); }
+
+/* what is left of each month, under its columns */
+.cvt-home-columns.cvt-home-with-net { height: 188px; }
+.cvt-home-column-net { font-size: 11px; font-weight: 700; white-space: nowrap; color: var(--cvt-band, var(--cvt-h-muted)); }
 
 /* ── The modules down the left ─────────────────────────────────────────────
    Frappe's own tiles, as a list of modules: down the left of the home on a wide
@@ -383,14 +467,6 @@ html[data-theme="dark"] .desktop-wrapper.cvt-has-home:not([data-mode="Edit"]) .c
 	}
 	.desktop-wrapper.cvt-has-home:not([data-mode="Edit"]) > .cvt-home { order: 2; flex: 1 1 0; min-width: 0; max-width: none; margin: 18px 20px 44px 0; padding: 0; }
 }
-@media (max-width: 1100px) {
-	.cvt-home-panels,
-	.cvt-home-panels.cvt-home-two,
-	.cvt-home-panels.cvt-home-three { grid-template-columns: minmax(0, 1fr); }
-}
-@media (min-width: 1101px) and (max-width: 1360px) {
-	.cvt-home-panels.cvt-home-three { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-}
 @media (max-width: 900px) {
 	.cvt-home-hero { padding: 18px; }
 	.cvt-home-hero h2 { font-size: 19px; }
@@ -400,7 +476,7 @@ html[data-theme="dark"] .desktop-wrapper.cvt-has-home:not([data-mode="Edit"]) .c
 	.desktop-wrapper.cvt-has-home:not([data-mode="Edit"]) > .desktop-container { margin: 12px 16px 32px; }
 	.cvt-home-hero-side { width: 100%; }
 	.cvt-home .cvt-home-chip, .cvt-home .cvt-home-action { flex: 1 1 auto; justify-content: center; }
-	.cvt-home-cards { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+	.cvt-home-cards { gap: 10px; }
 	.cvt-home-card-value { font-size: 22px; }
 	.cvt-home .cvt-home-bar { grid-template-columns: minmax(0, 96px) minmax(0, 1fr) auto; }
 	.cvt-home-columns { gap: 4px; padding: 12px 6px 0; }
@@ -526,6 +602,13 @@ html.cvt-mod-on .page-container[data-page-route="Workspaces"] .layout-main-secti
 	box-shadow: 0 6px 16px color-mix(in srgb, var(--cvt-highlight) 32%, transparent); transition: transform 0.12s ease, filter 0.12s ease;
 }
 .cvt-mod .cvt-mod-action:hover { filter: brightness(1.06); transform: translateY(-1px); }
+.cvt-mod .cvt-mod-board {
+	display: inline-flex; align-items: center; gap: 8px; padding: 11px 16px; border-radius: 12px; font-weight: 600; font-size: 13.5px;
+	color: var(--cvt-on-header); background: rgba(255, 255, 255, 0.1); box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.24);
+	transition: background 0.12s ease;
+}
+.cvt-mod .cvt-mod-board:hover { background: rgba(255, 255, 255, 0.18); }
+.cvt-mod .cvt-mod-board .cvt-mod-icon { color: var(--cvt-highlight); }
 .cvt-mod-bone {
 	display: block; height: 12px; width: 100%; border-radius: 6px;
 	background: linear-gradient(90deg, rgba(255, 255, 255, 0.14), rgba(255, 255, 255, 0.3), rgba(255, 255, 255, 0.14));

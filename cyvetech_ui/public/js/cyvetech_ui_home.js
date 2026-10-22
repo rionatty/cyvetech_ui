@@ -51,13 +51,20 @@
 	const SHOWN_CREATE = 3;
 	const SHOWN_VISITED = 5;
 
-	let answer = null; // the summary: the greeting, what waits, which figures and panels
+	// where the tab each viewer last opened is kept, in their own browser
+	const TAB_KEY = "cyvetech_ui:home_tab";
+	const OVERVIEW = "overview";
+
+	let answer = null; // the summary: the greeting, what waits, which figures and sections
 	let asked_at = 0;
 	let asking = false;
-	let more = null; // the figures: {"cards": [...], "panels": [...], "at", "currency"}
-	let more_at = 0;
-	let more_asking = false;
-	let tab = "items";
+	// the figures, by part: "cards" (across the top of the overview), or a tab's key, each
+	// {"cards", "panels", "badges", "at", "currency", "time"}
+	const parts = {};
+	const parts_asking = {};
+	let current = OVERVIEW; // the tab of dashboards open now
+	let requested = null; // a tab a module page's dashboard button asked for, until it is opened
+	let tab = "items"; // the list open in Waiting for You
 	let open_module = null; // the module whose own menu is open in the list
 	const shown_groups = new Set(); // the headings of a module's menu that are open, as "module|heading"
 
@@ -90,6 +97,14 @@
 		customers:
 			'<path d="M16 19v-1.5a3.5 3.5 0 0 0-3.5-3.5h-5A3.5 3.5 0 0 0 4 17.5V19"/><circle cx="10" cy="8" r="3.2"/><path d="M20 19v-1.4a3.2 3.2 0 0 0-2.4-3.1M15.5 5a3.2 3.2 0 0 1 0 6.1"/>',
 		drafts: '<path d="M4.5 19.5h4l10-10-4-4-10 10z"/><path d="M13 7l4 4"/>',
+		overview:
+			'<rect x="4" y="4" width="7" height="7" rx="1.6"/><rect x="13" y="4" width="7" height="7" rx="1.6"/>' +
+			'<rect x="4" y="13" width="7" height="7" rx="1.6"/><rect x="13" y="13" width="7" height="7" rx="1.6"/>',
+		assets: '<path d="M4 20V9l8-5 8 5v11"/><path d="M9 20v-6h6v6"/>',
+		quality: '<path d="M12 3.5l7 3v5.2c0 4.3-3 7.7-7 8.8-4-1.1-7-4.5-7-8.8V6.5z"/><path d="M8.8 12.2l2.2 2.2 4.2-4.4"/>',
+		reports:
+			'<path d="M7 3.5h7l4 4V19a1.5 1.5 0 0 1-1.5 1.5h-9.5A1.5 1.5 0 0 1 5.5 19V5A1.5 1.5 0 0 1 7 3.5z"/>' +
+			'<path d="M9 16v-3M12 16v-5M15 16v-2"/>',
 		arrow: '<path d="M5 12h14M13 6l6 6-6 6"/>',
 		chevron: '<path d="M9 6l6 6-6 6"/>',
 		plus: '<path d="M12 5.5v13M5.5 12h13"/>',
@@ -104,6 +119,45 @@
 		deliver: "to_deliver",
 		receive: "to_receive",
 		production: "work_orders",
+		profit: "sales",
+		payables: "payable",
+		items: "stock_value",
+		territories: "customers",
+		suppliers: "purchases",
+		warehouses: "stock_value",
+		projects: "tasks",
+		hours_by_project: "aging",
+		sales_trend: "trend",
+		purchase_trend: "trend",
+		stock_moves: "trend",
+		production_trend: "trend",
+		work_order_status: "work_orders",
+		job_cards_list: "work_orders",
+		requests_list: "orders",
+		requests: "orders",
+		negative: "attention",
+		job_cards: "work_orders",
+		completed: "work_orders",
+		projects_open: "tasks",
+		hours: "aging",
+		leads: "customers",
+		opportunities: "sales",
+		pipeline: "sales",
+		opportunities_closing: "sales",
+		opportunity_stages: "trend",
+		lead_sources: "customers",
+		issues_replied: "issues",
+		issues_on_hold: "issues",
+		issue_priorities: "issues",
+		asset_value: "assets",
+		asset_categories: "assets",
+		maintenance_due: "assets",
+		maintenance: "assets",
+		inspections: "quality",
+		rejected: "quality",
+		inspection_results: "quality",
+		non_conformances: "quality",
+		non_conformance_list: "quality",
 	};
 
 	function icon(name) {
@@ -129,7 +183,76 @@
 	}
 
 	function currency() {
-		return (more && more.currency) || (answer && answer.currency) || "";
+		const read = Object.values(parts).find((part) => part.currency);
+		return (read && read.currency) || (answer && answer.currency) || "";
+	}
+
+	// The tab a module page's dashboard button asks for. It comes as a route option, which Frappe's router may
+	// also carry in the address, JSON-encoded (router.js set_route), and it is taken off both once read: the tab
+	// the viewer moves to is not undone when the desk is drawn again, and the next list opened does not take it
+	// for a filter. Only while the desk is on the screen: Frappe keeps the pages it has shown, hidden, and
+	// another page's options are its own.
+	function take_request() {
+		const wrapper = desk();
+		if (!wrapper || wrapper.offsetParent === null) return;
+		try {
+			let named = null;
+			const options = frappe.route_options;
+			if (options && options.dashboard != null) {
+				named = options.dashboard;
+				delete options.dashboard;
+				if (!Object.keys(options).length) frappe.route_options = null;
+			}
+			const address = new URL(window.location.href);
+			if (address.searchParams.has("dashboard")) {
+				named = named || address.searchParams.get("dashboard");
+				address.searchParams.delete("dashboard");
+				window.history.replaceState(window.history.state, "", address.pathname + address.search + address.hash);
+			}
+			if (typeof named === "string" && named.startsWith('"')) named = JSON.parse(named);
+			if (named) requested = String(named);
+		} catch (error) {
+			console.error(error);
+		}
+	}
+
+	// The tab to open first: the one asked for, else the one the viewer last opened, else the overview; only one
+	// the user has
+	function first_tab(data) {
+		const have = (key) => (data.tabs || []).some((one) => one.key === key);
+		take_request();
+		const named = requested;
+		requested = null;
+		if (named && have(named)) return named;
+		let kept = null;
+		try {
+			kept = window.localStorage.getItem(TAB_KEY);
+		} catch (error) {
+			kept = null;
+		}
+		return kept && have(kept) ? kept : OVERVIEW;
+	}
+
+	function keep_tab() {
+		try {
+			window.localStorage.setItem(TAB_KEY, current);
+		} catch (error) {
+			// the tab still opens; it is only not remembered
+		}
+	}
+
+	// A tab asked for once the summary is here opens over the one open; until then, the summary opens it. Frappe
+	// says the page changed (container.js) before it draws the desk afresh, so the desk is drawn on this tab.
+	function follow_request() {
+		take_request();
+		if (!requested || !answer) return;
+		const named = requested;
+		requested = null;
+		if (!tab_of(named) || named === current) return;
+		current = named;
+		keep_tab();
+		redraw(); // where the home is not on the desk yet, show() draws it on this tab
+		load_parts(false);
 	}
 
 	// a sum of money as the home writes it: its currency, then the figure shortened (84.7M)
@@ -236,6 +359,7 @@
 			wrapper.insertBefore(home, tiles);
 			wrapper.classList.add("cvt-has-home");
 			home.addEventListener("click", clicked);
+			home.addEventListener("keydown", keyed);
 		}
 		// the heading of the list of modules, which the stylesheet writes above Frappe's tiles
 		wrapper.style.setProperty("--cvt-rail-title", JSON.stringify(__("Modules")));
@@ -469,21 +593,28 @@
 		);
 	}
 
-	// a business figure as the server read it, once it has
-	function card_of(key) {
-		return ((more && more.cards) || []).find((one) => one.key === key) || null;
+	// The figures across the top of a tab: the user's own work is there at once, a business figure as a frame
+	// until it is read, and not at all where it could not be. frames: what the summary said; read: what the
+	// server has read for them, once it has.
+	function shown_cards(frames, read) {
+		const found = (key) => ((read && read.cards) || []).find((one) => one.key === key) || null;
+		return (frames || []).map((one) => (one.frame ? (read ? found(one.key) : one) : one)).filter(Boolean);
 	}
 
-	// The figures across the top: the user's own work is there at once, a business figure as a frame until it
-	// is read, and not at all where it could not be.
-	function shown_cards(data) {
-		return (data.cards || [])
-			.map((one) => (one.frame ? (more ? card_of(one.key) : one) : one))
-			.filter(Boolean);
+	// the figures across the top of the tab open now
+	function tab_cards(data) {
+		const open = tab_of(current);
+		if (!open || open.key === OVERVIEW) return shown_cards(data.cards, parts.cards);
+		return shown_cards(open.cards, parts[open.key]);
+	}
+
+	// hours, to a tenth where they are not whole
+	function hours(value) {
+		return count(Math.round((Number(value) || 0) * 10) / 10) + " h";
 	}
 
 	function figure_of(card) {
-		return card.kind === "money" ? money(card.value) : count(card.value);
+		return card.kind === "money" ? money(card.value) : card.kind === "hours" ? hours(card.value) : count(card.value);
 	}
 
 	function note_of(card) {
@@ -500,7 +631,7 @@
 	}
 
 	function cards(data) {
-		const all = shown_cards(data);
+		const all = tab_cards(data);
 		if (!all.length) return "";
 		return (
 			`<div class="cvt-home-cards">` +
@@ -636,7 +767,7 @@
 			)
 			.join("");
 		return (
-			`<section class="cvt-home-panel cvt-home-waiting"><header><span class="cvt-home-panel-icon">${icon("waiting")}</span>` +
+			`<section class="cvt-home-panel cvt-home-waiting cvt-home-wide"><header><span class="cvt-home-panel-icon">${icon("waiting")}</span>` +
 			`<h3>${esc(__("Waiting for You"))}</h3><span class="cvt-home-tabs">${tabs}</span></header>` +
 			`<div class="cvt-home-list">${rows(
 				shown,
@@ -646,28 +777,31 @@
 		);
 	}
 
-	// ── The panels (home.py figures) ────────────────────────────────────────
-	// Each comes with the summary as {key, title, place}, and its figures in the second call: the greeting and
-	// what waits are never held up by them. A panel is drawn as a frame while its figures are on their way, and
-	// not at all where they could not be read.
+	// ── The dashboards (home.py figures) ────────────────────────────────────
+	// The summary says which tabs the user has, each with its figures and its dashboards as {key, title,
+	// size}, and a tab's figures come in a call of their own once it is opened: the greeting and what waits
+	// are never held up by them, and a tab never opened is never read. A dashboard is drawn as a frame while
+	// its figures are on their way, and not at all where they could not be read.
 
+	function tab_of(key) {
+		return ((answer && answer.tabs) || []).find((one) => one.key === key) || null;
+	}
+
+	// a dashboard of the tab open now, as the server read it
 	function panel_of(key) {
-		return ((more && more.panels) || []).find((one) => one.key === key) || null;
+		const read = parts[current];
+		return ((read && read.panels) || []).find((one) => one.key === key) || null;
 	}
 
-	function placed(data, place) {
-		return (data.panels || []).filter((item) => item.place === place);
-	}
-
-	function one_panel(item, wide) {
-		if (!more) return frame_panel(item, wide);
+	function one_panel(item) {
+		if (!parts[current]) return frame_panel(item);
 		const one = panel_of(item.key);
-		return one ? draw_panel(one, wide) : "";
+		return one ? draw_panel(one, item.size === "wide") : "";
 	}
 
-	function frame_panel(item, wide) {
+	function frame_panel(item) {
 		return (
-			`<section class="cvt-home-panel${wide ? " cvt-home-wide" : ""}" data-panel="${esc(item.key)}"><header>` +
+			`<section class="cvt-home-panel${item.size === "wide" ? " cvt-home-wide" : ""}" data-panel="${esc(item.key)}"><header>` +
 			`<span class="cvt-home-panel-icon">${icon(item.key)}</span><h3>${esc(__(item.title))}</h3></header>` +
 			`<div class="cvt-home-list cvt-home-pad">${bone("72%")}${bone("88%")}${bone("54%")}</div></section>`
 		);
@@ -713,15 +847,18 @@
 			.join("");
 	}
 
-	// Sales and Collections: a column for each series in each month, the month opening its documents
+	// Sales and Collections, Profit and Loss: a column for each series in each month, the month opening its
+	// documents. Where the months carry what is left of them (net), it is said under each, in green or red.
 	function columns_body(one) {
 		const months = one.months || [];
 		const series = one.series || [];
 		if (!months.length || !series.length) return nothing(__("Nothing to show yet."));
 		const most = Math.max(1, ...months.map((month) => Math.max(...(month.values || []).map((v) => Number(v) || 0))));
 		const tall = (value) => Math.round((100 * Math.max(0, Number(value) || 0)) / most);
+		const net = (value) =>
+			`<span class="cvt-home-column-net cvt-band-${Number(value) < 0 ? "overdue" : "good"}">${esc(money(value))}</span>`;
 		const chart =
-			`<div class="cvt-home-columns">` +
+			`<div class="cvt-home-columns${one.net ? " cvt-home-with-net" : ""}">` +
 			months
 				.map((month, index) => {
 					const values = month.values || [];
@@ -733,26 +870,33 @@
 							.map((s, at) => `<i class="cvt-band-${esc(s.band || "soon")}" style="height:${tall(values[at])}%"></i>`)
 							.join("")}</span>` +
 						`<span class="cvt-home-column-label">${esc(month_words(month))}</span>` +
-						`<span class="cvt-home-column-figures">${esc(money(values[0]))}</span></button>`
+						(one.net ? net(month.net) : `<span class="cvt-home-column-figures">${esc(money(values[0]))}</span>`) +
+						`</button>`
 					);
 				})
 				.join("") +
 			`</div>`;
-		const last = months[months.length - 1].values || [];
+		const last = months[months.length - 1];
+		const values = last.values || [];
+		const summary = one.net
+			? `${__(one.net.label || "Profit")} <b>${esc(money(last.net))}</b>` +
+			  (one.net.margin != null ? ` · ${esc(__("{0}% of income", [one.net.margin]))}` : "")
+			: esc(__("This month so far"));
 		const legend =
 			`<div class="cvt-home-legend">` +
 			series
 				.map(
 					(s, at) =>
 						`<span><i class="cvt-band-${esc(s.band || "soon")}"></i>${esc(__(s.label))} ` +
-						`<b>${esc(money(last[at]))}</b></span>`
+						`<b>${esc(money(values[at]))}</b></span>`
 				)
 				.join("") +
-			`<span class="cvt-home-legend-figure">${esc(__("This month so far"))}</span></div>`;
+			`<span class="cvt-home-legend-figure">${summary}</span></div>`;
 		return chart + legend;
 	}
 
-	// Receivables Aging: the whole owed as one bar split by how overdue, each part listed, then who owes the most
+	// Receivables and Payables Aging: the whole owed as one bar split by how overdue, each part listed, then who
+	// owes, or is owed, the most past due
 	function aging_body(one) {
 		const buckets = one.buckets || [];
 		const whole = buckets.reduce((sum, bucket) => sum + (Number(bucket.value) || 0), 0);
@@ -768,7 +912,7 @@
 				)
 				.join("") +
 			`</div>`;
-		const parts = buckets
+		const pieces = buckets
 			.map(
 				(bucket, index) =>
 					`<button type="button" class="cvt-home-bucket" data-cvt-home="more" data-panel="${esc(one.key)}" ` +
@@ -778,12 +922,19 @@
 			)
 			.join("");
 		const owing = (one.rows || []).length
-			? `<div class="cvt-home-sub">${esc(__("Owing the most past due"))}</div>` + rows(one.rows, "", "more", "rows", one.key)
+			? `<div class="cvt-home-sub">${esc(__(one.owing || "Owing the most past due"))}</div>` +
+			  rows(one.rows, "", "more", "rows", one.key)
 			: "";
-		return `<div class="cvt-home-pad-x">${split}</div><div class="cvt-home-buckets">${parts}</div>${owing}`;
+		return `<div class="cvt-home-pad-x">${split}</div><div class="cvt-home-buckets">${pieces}</div>${owing}`;
 	}
 
-	// Cash and Bank, Top Customers: bars, each as long as its share of the largest
+	// the filled part of a bar: none where there is nothing, not even the sliver the stylesheet keeps for a share
+	// too small to see
+	function filled(percent, band) {
+		return percent > 0 ? `<i class="cvt-band-${esc(band)}" style="width:${percent}%"></i>` : "";
+	}
+
+	// Cash and Bank, Top Customers, Top Items, Top Suppliers: bars, each as long as its share of the largest
 	function bars_body(one) {
 		const all = one.rows || [];
 		if (!all.length) return nothing(__(one.empty || "Nothing to show yet."));
@@ -793,12 +944,12 @@
 			all
 				.map((row, index) => {
 					const width = Math.round((100 * Math.abs(Number(row.value) || 0)) / most);
-					const figure = one.money ? money(row.value) : count(row.value);
+					const figure = one.money ? money(row.value) : one.hours ? hours(row.value) : count(row.value);
 					return (
 						`<button type="button" class="cvt-home-bar" data-cvt-home="more" data-panel="${esc(one.key)}" ` +
 						`data-part="rows" data-index="${index}"${one.money ? ` title="${esc(money_in_full(row.value))}"` : ""}>` +
 						`<span class="cvt-home-bar-label">${esc(row.label)}</span>` +
-						`<span class="cvt-home-bar-track"><i class="cvt-band-${esc(row.band || "soon")}" style="width:${width}%"></i></span>` +
+						`<span class="cvt-home-bar-track">${filled(width, row.band || "soon")}</span>` +
 						`<b>${esc(figure)}</b></button>`
 					);
 				})
@@ -807,7 +958,95 @@
 		);
 	}
 
-	// Orders to Deliver, Purchases to Receive, Work Orders Due, Tasks Due, Your Drafts
+	// the chart colors picked in the settings, the dark set in dark mode; only colors go into a style
+	function palette() {
+		const charts = (frappe.boot.cyvetech_ui || {}).charts || {};
+		const dark = document.documentElement.getAttribute("data-theme") === "dark";
+		const chosen = (dark && charts.dark_palette) || charts.palette || [];
+		const colors = chosen.filter((color) => /^#[0-9a-fA-F]{6}$/.test(String(color)));
+		return colors.length ? colors : ["#2f64b0", "#eb6834", "#1baf7a", "#eaa51a", "#e87ba4", "#008300"];
+	}
+
+	// Expenses This Month, Sales by Territory, Stock by Warehouse: a ring of the whole's parts, each listed with
+	// its share and opening what it is made of. The rest, put together, is drawn in the quiet gray.
+	function donut_body(one) {
+		const all = one.rows || [];
+		const whole = all.reduce((sum, row) => sum + Math.max(0, Number(row.value) || 0), 0);
+		if (!all.length || !whole) return nothing(__(one.empty || "Nothing to show yet."));
+		const colors = palette();
+		const color_of = (row, index) => (row.key == null ? "var(--cvt-band-none)" : colors[index % colors.length]);
+		let at = 0;
+		const stops = all
+			.map((row, index) => {
+				const from = at;
+				at += (100 * Math.max(0, Number(row.value) || 0)) / whole;
+				return `${color_of(row, index)} ${from.toFixed(2)}% ${at.toFixed(2)}%`;
+			})
+			.join(", ");
+		const ring =
+			`<div class="cvt-home-donut"><span class="cvt-home-donut-ring" role="img" ` +
+			`aria-label="${esc(all.map((row) => `${row.label}: ${money_in_full(row.value)}`).join(", "))}" ` +
+			`style="background: conic-gradient(${stops})"></span>` +
+			`<span class="cvt-home-donut-middle"><b>${esc(one.money ? money(whole) : count(whole))}</b>` +
+			`<small>${esc(__("in all"))}</small></span></div>`;
+		const legend = all
+			.map(
+				(row, index) =>
+					`<button type="button" class="cvt-home-slice" data-cvt-home="more" data-panel="${esc(one.key)}" data-part="rows" ` +
+					`data-index="${index}"><i style="background:${color_of(row, index)}"></i>` +
+					`<span class="cvt-home-bar-label">${esc(__(row.label))}</span>` +
+					`<b>${esc(one.money ? money(row.value) : count(row.value))}</b>` +
+					`<small>${Math.round((100 * Math.max(0, Number(row.value) || 0)) / whole)}%</small></button>`
+			)
+			.join("");
+		return `<div class="cvt-home-ring-row">${ring}<div class="cvt-home-slices">${legend}</div></div>`;
+	}
+
+	// Quotations: each stage a bar as long as its share of the largest, how many and their worth, and how many of
+	// those decided were won
+	function stages_body(one) {
+		const all = one.stages || [];
+		const most = Math.max(1, ...all.map((stage) => Number(stage.value) || 0));
+		if (!all.some((stage) => Number(stage.value) > 0)) return nothing(__("No quotations in the last 90 days."));
+		const bars = all
+			.map(
+				(stage, index) =>
+					`<button type="button" class="cvt-home-bar cvt-home-stage" data-cvt-home="more" data-panel="${esc(one.key)}" ` +
+					`data-part="stages" data-index="${index}" title="${esc(money_in_full(stage.amount))}">` +
+					`<span class="cvt-home-bar-label">${esc(__(stage.label))}</span>` +
+					`<span class="cvt-home-bar-track">${filled(Math.round((100 * (Number(stage.value) || 0)) / most), stage.band || "soon")}</span>` +
+					`<b>${count(stage.value)}</b><small>${esc(money(stage.amount))}</small></button>`
+			)
+			.join("");
+		const won =
+			one.won != null
+				? `<div class="cvt-home-legend"><span class="cvt-home-legend-figure">` +
+				  `${esc(__("Won {0}% of those decided", [one.won]))}</span></div>`
+				: "";
+		return `<div class="cvt-home-bars">${bars}</div>${won}`;
+	}
+
+	// Projects in Progress: each project, when it is due, and how far along it is
+	function progress_body(one) {
+		const all = one.rows || [];
+		if (!all.length) return nothing(__(one.empty || "Nothing here."));
+		return all
+			.map((row, index) => {
+				const done = Math.max(0, Math.min(100, Math.round(Number(row.progress) || 0)));
+				return (
+					`<button type="button" class="cvt-home-row cvt-home-progress" data-cvt-home="more" data-panel="${esc(one.key)}" ` +
+					`data-part="rows" data-index="${index}"><span class="cvt-home-dot cvt-band-${esc(row.band || "none")}"></span>` +
+					`<span class="cvt-home-row-text"><span class="cvt-home-row-title">${esc(row.title)}</span>` +
+					`<span class="cvt-home-row-meta">${esc(__(row.when || ""))}</span>` +
+					`<span class="cvt-home-bar-track" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${done}">` +
+					`${filled(done, "good")}</span></span>` +
+					`<b class="cvt-home-percent">${done}%</b>${icon("chevron")}</button>`
+				);
+			})
+			.join("");
+	}
+
+	// Orders to Deliver, Purchases to Receive, Work Orders Due, Tasks Due, Open Support Issues, Your Drafts
 	function list_body(one) {
 		const words = one.progress;
 		return rows(
@@ -845,51 +1084,140 @@
 		columns: columns_body,
 		aging: aging_body,
 		bars: bars_body,
+		donut: donut_body,
+		stages: stages_body,
+		progress: progress_body,
 		list: list_body,
 		reorder: reorder_body,
 	};
 
-	// what waits for the user, and what needs attention beside it
-	function first_row(data) {
-		const beside = placed(data, "beside")
-			.map((item) => one_panel(item, false))
-			.filter(Boolean);
-		return `<div class="cvt-home-panels${beside.length ? "" : " cvt-home-one"}">${waiting_panel(data)}${beside.join("")}</div>`;
+	// ── The tabs ────────────────────────────────────────────────────────────
+
+	// how much needs attention on a tab, as the overview read it
+	function badge_of(key) {
+		const badges = (parts[OVERVIEW] && parts[OVERVIEW].badges) || {};
+		return badges[key] || null;
 	}
 
-	function wide_row(data) {
-		return placed(data, "wide")
-			.map((item) => one_panel(item, true))
-			.join("");
-	}
-
-	function grid_row(data) {
-		const blocks = placed(data, "grid")
-			.map((item) => one_panel(item, false))
-			.filter(Boolean);
-		if (!blocks.length) return "";
-		const across = blocks.length > 2 ? "three" : blocks.length > 1 ? "two" : "one";
-		return `<div class="cvt-home-panels cvt-home-grid cvt-home-${across}">${blocks.join("")}</div>`;
-	}
-
-	// when the figures were read, and a way to read them again
-	function stamp() {
-		if (!more || !more.at) return "";
+	// a tab for each module the user has, the overview first: each says how much needs attention in it
+	function tab_bar(data) {
+		const all = data.tabs || [];
+		if (all.length < 2) return "";
 		return (
-			`<div class="cvt-home-stamp"><span>${esc(__("Figures as of {0}", [time_words(more.at)]))}</span>` +
-			`<button type="button" class="cvt-home-refresh" data-cvt-home="refresh">${icon("refresh")}` +
-			`<span>${esc(__("Refresh"))}</span></button></div>`
+			`<nav class="cvt-home-tabbar" role="tablist" aria-label="${esc(__("Dashboards"))}">` +
+			all
+				.map((one) => {
+					const on = one.key === current;
+					const badge = badge_of(one.key);
+					const says = badge && badge.value ? __("{0} need attention", [count(badge.value)]) : "";
+					return (
+						`<button type="button" role="tab" id="cvt-home-tab-${esc(one.key)}" class="cvt-home-tabbtn${on ? " cvt-on" : ""}" ` +
+						`data-cvt-home="open" data-tab="${esc(one.key)}" aria-selected="${on ? "true" : "false"}" ` +
+						`aria-controls="cvt-home-tabpanel" tabindex="${on ? "0" : "-1"}"${says ? ` title="${esc(says)}"` : ""}>` +
+						`${icon(one.icon)}<span>${esc(__(one.title))}</span>` +
+						(badge && badge.value
+							? `<i class="cvt-home-badge cvt-band-${esc(badge.band || "none")}" aria-label="${esc(says)}">${count(badge.value)}</i>`
+							: "") +
+						`</button>`
+					);
+				})
+				.join("") +
+			`</nav>`
 		);
 	}
 
-	function draw(home) {
+	// The heading of the tab open now: what it is, when its figures were read with a way to read them again,
+	// and for a module, the way into the module itself
+	function tab_head(data, open) {
+		const workspace = (open.workspaces || []).find((name) => nav.tile_path(name));
+		const into = workspace
+			? `<button type="button" class="cvt-home-into" data-cvt-home="module" data-workspace="${esc(workspace)}">` +
+			  `<span>${esc(__("Open {0}", [__(workspace)]))}</span>${icon("arrow")}</button>`
+			: "";
+		const title = open.key === OVERVIEW ? __("Overview") : __("{0} Dashboard", [__(open.title)]);
+		const under = open.key === OVERVIEW ? __("The day at a glance, across your modules") : data.company || "";
+		return (
+			`<div class="cvt-home-tabhead"><div class="cvt-home-tabhead-text"><h3>${esc(title)}</h3>` +
+			(under ? `<p>${esc(under)}</p>` : "") +
+			`</div><div class="cvt-home-tabhead-side">${stamp(open.key)}${into}</div></div>`
+		);
+	}
+
+	// the reports a decision is made from, each opening for the user's company
+	function reports_panel(open) {
+		const all = open.reports || [];
+		if (!all.length) return "";
+		return (
+			`<section class="cvt-home-panel cvt-home-reports" data-panel="reports"><header>` +
+			`<span class="cvt-home-panel-icon">${icon("reports")}</span><h3>${esc(__("Reports"))}</h3>` +
+			`<span class="cvt-home-panel-note">${esc(__("For a closer look"))}</span></header>` +
+			`<div class="cvt-home-list cvt-home-report-list">${all
+				.map(
+					(report, index) =>
+						`<button type="button" class="cvt-home-row cvt-home-report" data-cvt-home="report" data-index="${index}">` +
+						`<span class="cvt-home-row-text"><span class="cvt-home-row-title">${esc(__(report.label))}</span></span>` +
+						`${icon("chevron")}</button>`
+				)
+				.join("")}</div></section>`
+		);
+	}
+
+	// the tab open now: its heading, its figures, its dashboards and its reports
+	function tab_panel(data) {
+		const open = tab_of(current) || (data.tabs || [])[0];
+		if (!open) return "";
+		const blocks = (open.key === OVERVIEW ? [waiting_panel(data)] : [])
+			.concat((open.panels || []).map((item) => one_panel(item)))
+			.concat([reports_panel(open)])
+			.filter(Boolean);
+		return (
+			`<div class="cvt-home-tabpanel" id="cvt-home-tabpanel" role="tabpanel" aria-labelledby="cvt-home-tab-${esc(open.key)}">` +
+			tab_head(data, open) +
+			cards(data) +
+			(blocks.length ? `<div class="cvt-home-grid">${blocks.join("")}</div>` : "") +
+			`</div>`
+		);
+	}
+
+	// when the figures of a tab were read, and a way to read them again
+	function stamp(key) {
+		const times = [parts[key], key === OVERVIEW ? parts.cards : null]
+			.filter(Boolean)
+			.map((part) => part.at)
+			.filter(Boolean)
+			.sort();
+		if (!times.length) return "";
+		const busy = !!(parts_asking[key] || (key === OVERVIEW && parts_asking.cards));
+		return (
+			`<span class="cvt-home-stamp"><span>${esc(__("As of {0}", [time_words(times[0])]))}</span>` +
+			`<button type="button" class="cvt-home-refresh${busy ? " cvt-busy" : ""}" data-cvt-home="refresh">${icon("refresh")}` +
+			`<span>${esc(__("Refresh"))}</span></button></span>`
+		);
+	}
+
+	// scrolled: how far along the tab bar was scrolled before it was drawn again
+	function draw(home, scrolled) {
 		const data = answer;
 		if (!data) {
 			home.innerHTML = skeleton();
 			return;
 		}
-		home.innerHTML =
-			hero(data) + cards(data) + shortcuts(data) + first_row(data) + wide_row(data) + grid_row(data) + stamp();
+		home.innerHTML = hero(data) + shortcuts(data) + tab_bar(data) + tab_panel(data);
+		const bar = home.querySelector(".cvt-home-tabbar");
+		if (bar) reveal(bar, scrolled || 0);
+	}
+
+	// A tab bar wider than the screen scrolls sideways. It stays where the viewer left it, unless the open tab is
+	// out of sight there: then it moves just far enough to show it.
+	function reveal(bar, scrolled) {
+		bar.scrollLeft = scrolled;
+		const on = bar.querySelector(".cvt-home-tabbtn.cvt-on");
+		if (!on || bar.scrollWidth <= bar.clientWidth) return;
+		const edge = parseFloat(getComputedStyle(bar).paddingLeft) || 0;
+		const start = on.offsetLeft - edge;
+		const end = on.offsetLeft + on.offsetWidth + edge;
+		if (start < bar.scrollLeft) bar.scrollLeft = start;
+		else if (end > bar.scrollLeft + bar.clientWidth) bar.scrollLeft = end - bar.clientWidth;
 	}
 
 	// a route the server names, opened as Frappe opens it: a list on its filters, a report or page on its options
@@ -914,6 +1242,19 @@
 		}
 	}
 
+	// The tab bar as a row of tabs is worked by the keyboard (the WAI-ARIA tabs pattern): the arrows move to the
+	// next tab and open it, Home and End to the first and the last.
+	function keyed(event) {
+		const button = event.target.closest(".cvt-home-tabbtn");
+		if (!button || !answer) return;
+		const all = (answer.tabs || []).map((one) => one.key);
+		const at = all.indexOf(button.getAttribute("data-tab"));
+		const to = { ArrowRight: at + 1, ArrowLeft: at - 1, Home: 0, End: all.length - 1 }[event.key];
+		if (to == null || at < 0) return;
+		event.preventDefault();
+		open_tab(all[(to + all.length) % all.length], true);
+	}
+
 	function act(element) {
 		const data = answer;
 		const what = element.getAttribute("data-cvt-home");
@@ -921,6 +1262,8 @@
 		if (what === "tab") {
 			tab = element.getAttribute("data-tab") === "notes" ? "notes" : "items";
 			redraw();
+		} else if (what === "open") {
+			open_tab(element.getAttribute("data-tab"), false);
 		} else if (what === "todo") go({ route: ["List", "ToDo"], mine: 1 });
 		else if (what === "new") {
 			const doctype = element.getAttribute("data-doctype");
@@ -930,13 +1273,13 @@
 			if (link) frappe.set_route(link.route);
 		} else if (what === "card") {
 			const key = element.getAttribute("data-key");
-			go(shown_cards(data).find((one) => one.key === key && !one.frame));
+			go(tab_cards(data).find((one) => one.key === key && !one.frame));
 		} else if (what === "waiting") {
 			const row = ((tab === "notes" ? data.waiting.notes : data.waiting.items) || [])[index];
 			if (row && row.doctype && row.docname) frappe.set_route("Form", row.doctype, row.docname);
 			else go({ route: ["List", "ToDo"], mine: 1 });
 		} else if (what === "more") {
-			// a row of one of the panels: the record it names, else the list or report it opens on
+			// a row of one of the dashboards: the record it names, else the list or report it opens on
 			const one = panel_of(element.getAttribute("data-panel"));
 			const row = one && (one[element.getAttribute("data-part") || "rows"] || [])[index];
 			if (!row) return;
@@ -946,14 +1289,37 @@
 		} else if (what === "month") {
 			const one = panel_of(element.getAttribute("data-panel"));
 			const month = one && (one.months || [])[index];
-			if (month && one.route) {
+			if (month && one.route && one.day) {
 				go({ route: one.route, filters: Object.assign({}, one.filters, { [one.day]: ["between", [month.from, month.to]] }) });
+			} else if (month && one.route) {
+				go({ route: one.route, options: Object.assign({}, one.options, { from_date: month.from, to_date: month.to }) });
 			}
 		} else if (what === "all") {
 			const one = panel_of(element.getAttribute("data-panel"));
 			if (one) go(one);
+		} else if (what === "report") {
+			const open = tab_of(current);
+			const report = open && (open.reports || [])[index];
+			if (report) go({ route: report.route, options: data.company ? { company: data.company } : null });
+		} else if (what === "module") {
+			const workspace = element.getAttribute("data-workspace");
+			const path = workspace && nav.tile_path(workspace);
+			if (path) nav.follow(path, workspace);
 		} else if (what === "refresh") {
-			load_figures(true);
+			load_parts(true);
+		}
+	}
+
+	// another tab opened: drawn at once, its figures asked for if they are not here yet
+	function open_tab(key, focus) {
+		if (!tab_of(key)) return;
+		current = key;
+		keep_tab();
+		redraw();
+		load_parts(false);
+		if (focus) {
+			const button = document.getElementById("cvt-home-tab-" + key);
+			if (button) button.focus();
 		}
 	}
 
@@ -961,7 +1327,11 @@
 		try {
 			const wrapper = desk();
 			const home = present() ? wrapper.querySelector(".cvt-home") : null;
-			if (home && answer) draw(home);
+			if (home && answer) {
+				// the tab bar scrolled to where the viewer left it, not back to its start
+				const bar = home.querySelector(".cvt-home-tabbar");
+				draw(home, bar ? bar.scrollLeft : 0);
+			}
 		} catch (error) {
 			console.error(error);
 		}
@@ -984,9 +1354,14 @@
 		if (asking || Date.now() - asked_at < FRESH_MS) return;
 		asking = true;
 		ask(SUMMARY).then((data) => {
+			const first = !answer;
 			answer = data || answer;
 			asked_at = Date.now(); // a call that failed is tried again later, not at once
 			asking = false;
+			if (answer && first) {
+				current = first_tab(answer);
+				keep_tab();
+			}
 			try {
 				const there = mount();
 				if (there && answer) draw(there);
@@ -994,24 +1369,36 @@
 			} catch (error) {
 				console.error(error);
 			}
-			load_figures(false);
+			load_parts(false);
 		});
 	}
 
-	// The figures, once the home is drawn, by fetch for the same reason as the summary. A call that fails leaves
-	// no panel where the frames were, and is tried again later. Refresh asks the server to read them afresh.
-	function load_figures(fresh) {
-		if (more_asking || !answer) return;
-		if (!fresh && Date.now() - more_at < FRESH_MS) return;
-		const wanted = (answer.panels || []).length || (answer.cards || []).some((one) => one.frame);
-		if (!wanted) return;
-		more_asking = true;
-		const refresh = document.querySelector(".cvt-home-refresh");
-		if (refresh) refresh.classList.add("cvt-busy");
-		ask(FIGURES, fresh ? "?fresh=1" : "").then((data) => {
-			more = data || more || { cards: [], panels: [] };
-			more_at = Date.now();
-			more_asking = false;
+	// What the tab open now needs, and the overview's figures, which say how much needs attention on each tab.
+	// Refresh asks the server to read again each part already read.
+	function load_parts(fresh) {
+		if (!answer) return;
+		const wanted = [OVERVIEW, current];
+		if (current === OVERVIEW && (answer.cards || []).some((one) => one.frame)) wanted.push("cards");
+		const again = fresh ? Object.keys(parts) : [];
+		Array.from(new Set(wanted.concat(again))).forEach((part) => load_part(part, fresh));
+	}
+
+	// One part's figures, by fetch for the same reason as the summary. A call that fails leaves no dashboard
+	// where its frames were, and is tried again later.
+	function load_part(part, fresh) {
+		if (!answer || parts_asking[part]) return;
+		const had = parts[part];
+		if (!fresh && had && Date.now() - had.time < FRESH_MS) return;
+		if (part !== "cards" && !tab_of(part)) return;
+		parts_asking[part] = true;
+		if (fresh) redraw(); // the refresh turns while it reads
+		ask(FIGURES, "?part=" + encodeURIComponent(part) + (fresh ? "&fresh=1" : "")).then((data) => {
+			let read;
+			if (!data) read = had || { cards: [], panels: [] };
+			else if (part === "cards") read = { cards: data.cards || [] };
+			else read = Object.assign({ cards: [], panels: [] }, (data.tabs || {})[part] || {});
+			parts[part] = Object.assign(read, { at: (data && data.at) || (had && had.at), currency: data && data.currency, time: Date.now() });
+			parts_asking[part] = false;
 			redraw();
 		});
 	}
@@ -1025,7 +1412,7 @@
 			if (!home) return false;
 			draw(home);
 			load();
-			load_figures(false);
+			load_parts(false);
 			return true;
 		} catch (error) {
 			console.error(error);
@@ -1047,6 +1434,7 @@
 	// puts the home back where it is missing.
 	function arrive() {
 		if (!on_desk()) return;
+		follow_request();
 		let tries = 0;
 		const look = () => {
 			tries += 1;
@@ -1088,7 +1476,7 @@
 	}
 
 	cyvetech_ui.home.show = arrive;
-	cyvetech_ui.home.refresh = () => load_figures(true);
+	cyvetech_ui.home.refresh = () => load_parts(true);
 	$(document).on("page-change", arrive);
 	$(document).on("desktop_screen", drawn_again);
 	$(window).on("resize", resized);

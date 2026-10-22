@@ -3,7 +3,7 @@ from cyvetech_ui.cyvetech_ui.asset_urls import versioned
 app_name = "cyvetech_ui"
 app_title = "CyveTech UI"
 app_publisher = "CyveTech"
-app_description = "Branding, theme, a desk home for ERPNext, module pages, desk modules, and user alerts for the Frappe / ERPNext desk"
+app_description = "Branding, theme, a desk home with a dashboard for each ERPNext module, module pages, desk modules, and user alerts for the Frappe / ERPNext desk"
 app_email = "ferdinand@cyvetech.com"
 app_license = "mit"
 

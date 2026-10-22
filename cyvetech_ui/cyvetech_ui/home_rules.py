@@ -35,7 +35,7 @@ may read none of it gets their own work: what waits for them, and their drafts.
 import calendar
 import datetime
 
-from cyvetech_ui.cyvetech_ui import alerts_rules
+from cyvetech_ui.cyvetech_ui import alerts_rules, dashboards_rules as dashboards
 
 OVERDUE, TODAY, SOON, LATER, NONE = (
 	alerts_rules.OVERDUE,
@@ -89,7 +89,7 @@ def desks_of(roles, readable=()):
 
 # ── The figures across the top ───────────────────────────────────────────────
 
-MONEY, COUNT = "money", "count"
+MONEY, COUNT, HOURS = "money", "count", "hours"
 
 # card: (label, what its figure is, the doctypes it is read from)
 CARDS = {
@@ -109,6 +109,9 @@ CARDS = {
 	"issues": ("Open Issues", COUNT, ("Issue",)),
 }
 
+for _key, _spec in dashboards.FIGURES.items():
+	CARDS[_key] = (_spec["label"], _spec["kind"], dashboards.needs_of(_spec))
+
 # each desk's figures, most telling first
 DESK_CARDS = {
 	FINANCE: ("sales", "receivable", "payable", "cash"),
@@ -119,7 +122,9 @@ DESK_CARDS = {
 	PROJECTS: ("tasks",),
 	SUPPORT: ("issues",),
 }
-SHOWN_CARDS = 4
+# the most figures across the top, in rows of ROW
+SHOWN_CARDS = 8
+ROW = 4
 
 
 def cards_for(desks, readable, shown=SHOWN_CARDS):
@@ -143,14 +148,16 @@ def frame(key):
 
 def home_cards(keys, waits, shown=SHOWN_CARDS):
 	"""What the top of the home starts with: the business figures' frames, and the
-	user's own work after them where there is room. A desk with no business
-	figures has the user's own work only."""
+	user's own work after them where a row has room, so the rows are full as far
+	as it goes. A desk with no business figures has the user's own work only."""
 	cards = [frame(key) for key in keys][:shown]
 	own = own_cards(waits)
 	if not cards:
 		return own
-	if len(cards) < shown:
-		cards.append(own[0])
+	for card in own:
+		if len(cards) % ROW == 0:
+			break
+		cards.append(card)
 	return cards
 
 
@@ -245,10 +252,10 @@ def greeting(hour):
 	return "Good morning" if hour < 12 else "Good afternoon" if hour < 17 else "Good evening"
 
 
-# ── The panels under what waits ──────────────────────────────────────────────
+# ── The dashboards ───────────────────────────────────────────────────────────
 
-# where a panel goes: beside what waits for the user, across the page, or in the grid below
-BESIDE, WIDE, GRID = "beside", "wide", "grid"
+# how wide a dashboard is drawn: across two columns, or one
+WIDE, NORMAL = dashboards.WIDE, dashboards.NORMAL
 
 # what each user's drafts are looked for in: the documents a day's work leaves half done
 DRAFT_DOCTYPES = (
@@ -267,41 +274,61 @@ DRAFT_DOCTYPES = (
 	"Work Order",
 )
 
-# panel: (title, the settings switch, where it goes, the doctypes it is read from:
-# any one of the sets will do, and none at all means it decides for itself)
-PANELS = {
-	"attention": ("Needs Attention", "home_attention", BESIDE, ()),
-	"trend": ("Sales and Collections", "home_trend", WIDE, (("Sales Invoice",), ("Sales Order",))),
-	"aging": ("Receivables Aging", "home_aging", GRID, (("Sales Invoice",),)),
-	"cash": ("Cash and Bank", "home_cash", GRID, (("GL Entry", "Account"),)),
-	"customers": ("Top Customers This Month", "home_customers", GRID, (("Sales Invoice",), ("Sales Order",))),
-	"deliver": ("Orders to Deliver", "home_deliver", GRID, (("Sales Order",),)),
-	"receive": ("Purchases to Receive", "home_receive", GRID, (("Purchase Order",),)),
-	"reorder": ("Stock to Reorder", "home_reorder", GRID, (("Bin", "Item", "Warehouse"),)),
-	"production": ("Work Orders Due", "home_production", GRID, (("Work Order",),)),
-	"tasks": ("Tasks Due", "home_tasks", GRID, (("Task",),)),
-	"drafts": ("Your Drafts", "home_drafts", GRID, tuple((doctype,) for doctype in DRAFT_DOCTYPES)),
-}
-SWITCHES = tuple(switch for _title, switch, _place, _needs in PANELS.values())
+SALES_DOCUMENTS = (("Sales Invoice",), ("Sales Order",))
+LEDGER = (("GL Entry", "Account"),)
 
-# each desk's panels; Needs Attention is on every desk that has one, Your Drafts on every home
-DESK_PANELS = {
-	FINANCE: ("trend", "aging", "cash", "customers"),
-	SALES: ("trend", "deliver", "customers"),
-	BUYING: ("receive", "reorder"),
-	STOCK: ("reorder", "deliver", "receive"),
-	MAKING: ("production", "reorder"),
-	PROJECTS: ("tasks",),
-	SUPPORT: (),
+# dashboard: (title, size, the doctypes it is read from: any one of the sets will do,
+# and none at all means it decides for itself). Those read by home.py's own readers
+# first; then the declared ones (dashboards_rules.py).
+PANELS = {
+	"attention": ("Needs Attention", NORMAL, ()),
+	"trend": ("Sales and Collections", WIDE, (("Sales Invoice",),)),
+	"cash": ("Cash and Bank", NORMAL, LEDGER),
+	"profit": ("Profit and Loss", WIDE, LEDGER),
+	"expenses": ("Expenses This Month", NORMAL, LEDGER),
+	"aging": ("Receivables Aging", NORMAL, (("Sales Invoice",),)),
+	"payables": ("Payables Aging", NORMAL, (("Purchase Invoice",),)),
+	"customers": ("Top Customers This Month", NORMAL, SALES_DOCUMENTS),
+	"items": ("Top Items This Month", NORMAL, SALES_DOCUMENTS),
+	"territories": ("Sales by Territory", NORMAL, SALES_DOCUMENTS),
+	"quotations": ("Quotations, Last 90 Days", NORMAL, (("Quotation",),)),
+	"deliver": ("Orders to Deliver", NORMAL, (("Sales Order",),)),
+	"receive": ("Purchases to Receive", NORMAL, (("Purchase Order",),)),
+	"suppliers": ("Top Suppliers This Month", NORMAL, (("Purchase Invoice",), ("Purchase Order",))),
+	"reorder": ("Stock to Reorder", NORMAL, (("Bin", "Item", "Warehouse"),)),
+	"warehouses": ("Stock by Warehouse", NORMAL, (("Bin", "Warehouse"),)),
+	"production": ("Work Orders Due", NORMAL, (("Work Order",),)),
+	"projects": ("Projects in Progress", NORMAL, (("Project",),)),
+	"tasks": ("Tasks Due", NORMAL, (("Task",),)),
+	"hours_by_project": ("Hours by Project This Month", NORMAL, (("Timesheet",),)),
+	"issues": ("Open Support Issues", NORMAL, (("Issue",),)),
+	"drafts": ("Your Drafts", NORMAL, tuple((doctype,) for doctype in DRAFT_DOCTYPES)),
+}
+for _key, _spec in dashboards.GROUPS.items():
+	PANELS[_key] = (_spec["title"], NORMAL, (dashboards.needs_of(_spec),))
+for _key, _spec in dashboards.MONTHLY.items():
+	PANELS[_key] = (_spec["title"], WIDE, tuple((doctype,) for doctype in dashboards.needs_of(_spec)))
+for _key, _spec in dashboards.LISTS.items():
+	PANELS[_key] = (_spec["title"], NORMAL, (dashboards.needs_of(_spec),))
+
+# the tab each desk is mostly about: a user's tabs come in the order of their desks
+DESK_TAB = {
+	FINANCE: "accounts",
+	SALES: "selling",
+	BUYING: "buying",
+	STOCK: "stock",
+	MAKING: "manufacturing",
+	PROJECTS: "projects",
+	SUPPORT: "support",
 }
 
 
 def switched_on(stored):
-	"""Each panel's switch as on or off. stored: the settings as saved; a switch
-	never saved is on, as its field's default says."""
+	"""Each module tab's switch as on or off. stored: the settings as saved; a
+	switch never saved is on, as its field's default says."""
 	stored = stored or {}
 	out = {}
-	for switch in SWITCHES:
+	for switch in dashboards.SWITCHES:
 		value = stored.get(switch)
 		if value is None or value == "":
 			out[switch] = True
@@ -319,20 +346,76 @@ def available(needs, readable):
 	return not needs or any(all(doctype in readable for doctype in group) for group in needs)
 
 
-def panels_for(desks, readable, switches=None):
-	"""The panels a user's home has, in the home's order: {"key", "title",
-	"place"} for each their desks have, the settings show, and they may read."""
+def _panel(key):
+	title, size, _needs = PANELS[key]
+	return {"key": key, "title": title, "size": size}
+
+
+def tabs_for(desks, readable, blocked=(), switches=None, reports=None):
+	"""The tabs of a user's desk: Overview, then a tab for each module that is
+	theirs, their own desks' modules first. A module's tab is there only where
+	the module is not blocked for them, the settings show it, and something on it
+	is theirs to read. Each: {"key", "title", "icon", "module", "workspaces",
+	"cards" (frames), "panels", "reports"}.
+
+	reports: the reports the user may open, or None where that cannot be said,
+	when a report is offered to whoever may read what it reports on."""
+	readable = set(readable or ())
+	blocked = set(blocked or ())
 	switches = switches if switches is not None else switched_on({})
-	wanted = {"drafts"}
-	if desks:
-		wanted.add("attention")
-	for desk in desks or ():
-		wanted.update(DESK_PANELS.get(desk, ()))
-	out = []
-	for key, (title, switch, place, needs) in PANELS.items():
-		if key in wanted and switches.get(switch, True) and available(needs, readable):
-			out.append({"key": key, "title": title, "place": place})
-	return out
+	tabs = []
+	for tab in dashboards.TABS:
+		if tab["module"] in blocked or not switches.get("dash_" + tab["key"], True):
+			continue
+		if not any(doctype in readable for doctype in tab["anchors"]):
+			continue
+		cards = [key for key in tab["cards"] if all(doctype in readable for doctype in CARDS[key][2])]
+		panels = [key for key in tab["panels"] if key != "attention" and available(PANELS[key][2], readable)]
+		if not cards and not panels:
+			continue
+		if "attention" in tab["panels"] and attention_in(tab["key"], readable):
+			panels.insert(0, "attention")
+		offered = [
+			{"label": name, "route": ["query-report", name]}
+			for name in tab["reports"]
+			if (name in reports if reports is not None else dashboards.REPORT_DOCTYPES.get(name) in readable)
+		]
+		tabs.append(
+			{
+				"key": tab["key"],
+				"title": tab["title"],
+				"icon": tab["icon"],
+				"module": tab["module"],
+				"workspaces": list(tab["workspaces"]),
+				"cards": [frame(key) for key in cards],
+				"panels": [_panel(key) for key in panels],
+				"reports": offered,
+			}
+		)
+	first = [DESK_TAB[desk] for desk in desks or () if desk in DESK_TAB]
+	tabs.sort(key=lambda tab: (first.index(tab["key"]) if tab["key"] in first else len(first), dashboards.TAB_KEYS.index(tab["key"])))
+	overview_panels = [key for key in ("attention", "drafts") if available(PANELS[key][2], readable)]
+	if "attention" in overview_panels and not attention_overview([tab["key"] for tab in tabs], readable):
+		overview_panels.remove("attention")
+	overview = {
+		"key": dashboards.OVERVIEW,
+		"title": dashboards.TAB_TITLES[dashboards.OVERVIEW],
+		"icon": "overview",
+		"module": None,
+		"workspaces": [],
+		"cards": [],  # the figures across the top of the home are the overview's
+		"panels": [_panel(key) for key in overview_panels],
+		"reports": [],
+	}
+	return [overview, *tabs]
+
+
+def tab_of_workspace(tabs, workspace):
+	"""The tab a module page's workspace is the dashboard of, among a user's tabs."""
+	for tab in tabs or ():
+		if workspace in (tab.get("workspaces") or ()):
+			return tab["key"]
+	return None
 
 
 # ── Dates ────────────────────────────────────────────────────────────────────
@@ -444,13 +527,13 @@ def _due_between(today, first, last):
 	return ["between", [str(today - datetime.timedelta(days=last)), str(today - datetime.timedelta(days=first))]]
 
 
-def most_overdue(rows, today, shown=5):
-	"""The customers who owe the most past its due date, the largest first.
-	rows: [{"customer", "customer_name", "total", "oldest"}], in the company's
-	currency, overdue only."""
+def most_overdue(rows, today, shown=5, doctype="Customer", party="customer"):
+	"""The parties owed the most past its due date, the largest first: the
+	customers who owe the company, or the suppliers it owes. rows: [{party,
+	party + "_name", "total", "oldest"}], in the company's currency, overdue only."""
 	ordered = sorted(
 		(row for row in rows or () if _number(row.get("total")) > 0),
-		key=lambda row: (-_number(row.get("total")), str(row.get("customer") or "")),
+		key=lambda row: (-_number(row.get("total")), str(row.get(party) or "")),
 	)
 	out = []
 	for row in ordered[:shown]:
@@ -458,9 +541,9 @@ def most_overdue(rows, today, shown=5):
 		late = (today - oldest).days if oldest else 0
 		out.append(
 			{
-				"title": row.get("customer_name") or row.get("customer") or "",
-				"doctype": "Customer",
-				"docname": row.get("customer"),
+				"title": row.get(party + "_name") or row.get(party) or "",
+				"doctype": doctype,
+				"docname": row.get(party),
 				"value": round(_number(row.get("total")), 2),
 				"when": "oldest %d %s overdue" % (late, "day" if late == 1 else "days") if late > 0 else "",
 				"band": OVERDUE if late > 60 else TODAY if late > 30 else SOON,
@@ -581,6 +664,112 @@ def ranked(rows, label, value, shown=5, name=None, doctype=None):
 	return out
 
 
+def open_for(rows, today, doctype, title, opened, shown=SHOWN):
+	"""Open documents, the longest open first: rows the home lists. Open more
+	than a week is late; more than two days, due today."""
+	ordered = sorted(rows or (), key=lambda row: (_day(row.get(opened)) or today, str(row.get("name") or "")))
+	out = []
+	for row in ordered[:shown]:
+		age = max(0, (today - (_day(row.get(opened)) or today)).days)
+		out.append(
+			{
+				"title": row.get(title) or row.get("name") or "",
+				"doctype": doctype,
+				"docname": row.get("name"),
+				"when": "opened today" if age == 0 else "open for %d %s" % (age, "day" if age == 1 else "days"),
+				"band": OVERDUE if age > 7 else TODAY if age > 2 else SOON,
+			}
+		)
+	return out
+
+
+# ── Profit and loss ──────────────────────────────────────────────────────────
+
+
+def signed(rows, side):
+	"""Ledger rows ({"day", "debit", "credit"}) as what they add to income
+	(credit less debit) or to expenses (debit less credit)."""
+	out = []
+	for row in rows or ():
+		debit, credit = _number(row.get("debit")), _number(row.get("credit"))
+		out.append({"day": row.get("day"), "total": credit - debit if side == "income" else debit - credit})
+	return out
+
+
+def profit(income, expenses, months_):
+	"""Each month's income, expenses and what is left: the months with
+	{"values": [income, expenses], "net"}. income and expenses: ledger rows
+	by day, as signed() gives them."""
+	earned = by_month(income, months_)
+	spent = by_month(expenses, months_)
+	return [
+		dict(month, values=[earned[index], spent[index]], net=round(earned[index] - spent[index], 2))
+		for index, month in enumerate(months_)
+	]
+
+
+def margin(month):
+	"""What is left of every hundred earned, as a percent, or None with nothing earned."""
+	earned = _number((month.get("values") or [0])[0])
+	return round(100.0 * _number(month.get("net")) / earned) if earned > 0 else None
+
+
+# ── Shares of a whole ────────────────────────────────────────────────────────
+
+
+def slices(rows, label, value, shown=5, other="Everything else"):
+	"""The largest parts of a whole as they are, and the rest as one, for a
+	ring: [{"label", "value", "key"}], the largest first. A part of nothing, or
+	of less, is left out."""
+	ordered = sorted(
+		(row for row in rows or () if _number(row.get(value)) > 0),
+		key=lambda row: (-_number(row.get(value)), str(row.get(label) or "")),
+	)
+	out = [{"label": row.get(label) or "", "value": round(_number(row.get(value)), 2), "key": row.get(label)} for row in ordered[:shown]]
+	rest = sum(_number(row.get(value)) for row in ordered[shown:])
+	if rest > 0:
+		out.append({"label": other, "value": round(rest, 2), "key": None})
+	return out
+
+
+# ── Quotations ───────────────────────────────────────────────────────────────
+
+QUOTATION_DAYS = 90
+# (key, label, the statuses it holds, band), in the order a quotation goes
+QUOTATION_STAGES = (
+	("open", "Open", ("Open", "Replied"), SOON),
+	("won", "Won", ("Ordered", "Partially Ordered"), GOOD),
+	("lost", "Lost", ("Lost",), OVERDUE),
+	("expired", "Expired", ("Expired",), NONE),
+)
+
+
+def quotation_stages(rows):
+	"""The quotations by where they stand, and how many of those decided were
+	won. rows: [{"status", "count", "total"}]. {"stages": [{"key", "label",
+	"value" (how many), "amount", "band", "filters"}], "won": percent or None}."""
+	count = {}
+	amount = {}
+	for row in rows or ():
+		count[row.get("status")] = count.get(row.get("status"), 0) + int(_number(row.get("count")))
+		amount[row.get("status")] = amount.get(row.get("status"), 0.0) + _number(row.get("total"))
+	stages = []
+	for key, label, statuses, band in QUOTATION_STAGES:
+		stages.append(
+			{
+				"key": key,
+				"label": label,
+				"value": sum(count.get(status, 0) for status in statuses),
+				"amount": round(sum(amount.get(status, 0.0) for status in statuses), 2),
+				"band": band,
+				"filters": {"status": ["in", list(statuses)]},
+			}
+		)
+	decided = sum(stage["value"] for stage in stages if stage["key"] != "open")
+	won = next(stage["value"] for stage in stages if stage["key"] == "won")
+	return {"stages": stages, "won": round(100.0 * won / decided) if decided else None}
+
+
 # ── What needs attention ─────────────────────────────────────────────────────
 
 SALES_OPEN = ("To Deliver and Bill", "To Deliver")
@@ -608,6 +797,34 @@ ATTENTION = (
 	("issues_open", "Support issue open", "Support issues open", "Issue", (SUPPORT,), SOON),
 )
 ATTENTION_DOCTYPE = {key: doctype for key, _one, _many, doctype, _desks, _band in ATTENTION}
+# the module tab each check is shown on, and counted against on the tab bar
+ATTENTION_TAB = {
+	"invoices_overdue": "accounts",
+	"bills_due": "accounts",
+	"orders_late": "selling",
+	"orders_to_bill": "selling",
+	"quotations_expiring": "selling",
+	"purchases_late": "buying",
+	"requests_late": "buying",
+	"receipts_to_bill": "buying",
+	"negative_stock": "stock",
+	"work_orders_late": "manufacturing",
+	"tasks_overdue": "projects",
+	"issues_open": "support",
+}
+
+
+def attention_in(tab, readable):
+	"""The checks shown on one module's tab, whose doctype the user may read."""
+	readable = set(readable or ())
+	return [key for key, *_rest in ATTENTION if ATTENTION_TAB[key] == tab and ATTENTION_DOCTYPE[key] in readable]
+
+
+def attention_overview(tabs, readable):
+	"""The checks on the overview: those of every module tab the user has."""
+	tabs = set(tabs or ())
+	readable = set(readable or ())
+	return [key for key, *_rest in ATTENTION if ATTENTION_TAB[key] in tabs and ATTENTION_DOCTYPE[key] in readable]
 
 
 def attention_for(desks, readable):
@@ -662,6 +879,21 @@ def attention_rows(counts, today, company=None):
 		)
 	rows.sort(key=lambda row: (SEVERITY.index(row["band"]), order[row["key"]]))
 	return rows
+
+
+def badges(rows):
+	"""How much needs attention on each tab, for the tab bar, from attention_rows'
+	rows in any order: {tab: {"value": how many in all, "band": the most pressing}}."""
+	out = {}
+	for row in rows or ():
+		tab = ATTENTION_TAB.get(row["key"])
+		if not tab:
+			continue
+		found = out.setdefault(tab, {"value": 0, "band": row["band"]})
+		found["value"] += row["value"]
+		if SEVERITY.index(row["band"]) < SEVERITY.index(found["band"]):
+			found["band"] = row["band"]
+	return out
 
 
 # ── What the user makes most ─────────────────────────────────────────────────

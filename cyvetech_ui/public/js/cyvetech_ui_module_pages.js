@@ -92,15 +92,6 @@
 		return page && page.name ? page : null;
 	}
 
-	// the headings of the module's menu with something under them: what the module holds
-	function groups_of(name) {
-		const items = ((nav.sidebar_of(name) || {}).items || []).filter((item) => item && !item.hidden);
-		return items
-			.filter((item, index) => item.type === "Section Break" && items[index + 1] && items[index + 1].type !== "Section Break")
-			.map((item) => item.label)
-			.filter(Boolean);
-	}
-
 	// a module the user may open: its tile leads somewhere they may go
 	function may_open(name) {
 		return !!nav.tile_path(name);
@@ -212,7 +203,6 @@
 
 	function hero(page) {
 		const name = page.name;
-		const groups = groups_of(name);
 		const stage = stage_of(name);
 		const data = data_of(name);
 		const waits = data && data.waiting;
@@ -235,7 +225,6 @@
 		return (
 			`<section class="cvt-mod-hero">${picture(page)}` +
 			`<div class="cvt-mod-hero-text"><h2>${esc(__(page.title || name))}</h2>` +
-			(groups.length ? `<p>${groups.map((group) => esc(__(group))).join(" · ")}</p>` : "") +
 			flags(data) +
 			(stage ? track(stage) : "") +
 			`</div>` +

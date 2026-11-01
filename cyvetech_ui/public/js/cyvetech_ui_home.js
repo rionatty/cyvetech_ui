@@ -1126,8 +1126,8 @@
 		);
 	}
 
-	// The heading of the tab open now: what it is, when its figures were read with a way to read them again,
-	// and for a module, the way into the module itself
+	// The heading of the tab open now: what it is (for a module, with its company), when its figures were read
+	// with a way to read them again, and for a module, the way into the module itself
 	function tab_head(data, open) {
 		const workspace = (open.workspaces || []).find((name) => nav.tile_path(name));
 		const into = workspace
@@ -1135,7 +1135,7 @@
 			  `<span>${esc(__("Open {0}", [__(workspace)]))}</span>${icon("arrow")}</button>`
 			: "";
 		const title = open.key === OVERVIEW ? __("Overview") : __("{0} Dashboard", [__(open.title)]);
-		const under = open.key === OVERVIEW ? __("The day at a glance, across your modules") : data.company || "";
+		const under = open.key === OVERVIEW ? "" : data.company || "";
 		return (
 			`<div class="cvt-home-tabhead"><div class="cvt-home-tabhead-text"><h3>${esc(title)}</h3>` +
 			(under ? `<p>${esc(under)}</p>` : "") +

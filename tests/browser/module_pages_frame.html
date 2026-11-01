@@ -167,7 +167,7 @@
 		check("a header goes first in the workspace's body", $q("#body > .cvt-mod") === $q("#body").firstElementChild, $q("#body").firstElementChild.className);
 		check("and shows first, above Frappe's blocks", css("#body > .cvt-mod", "order") === "-1" && css("#body", "display") === "flex", css("#body > .cvt-mod", "order"));
 		check("the module's name", text(".cvt-mod-hero h2") === "Selling", text(".cvt-mod-hero h2"));
-		check("the groups of its menu, a heading with nothing under it left out", text(".cvt-mod-hero p") === "POS · Setup", text(".cvt-mod-hero p"));
+		check("no line of its menu's groups under its name", !$q(".cvt-mod-hero-text > p"), text(".cvt-mod-hero-text"));
 		check("while what waits is on its way, a frame", $q(".cvt-mod-chip.cvt-mod-asking"), "no frame");
 		check("its usual document to make, until the server says what this user makes there", text(".cvt-mod-action") === "New Sales Order", text(".cvt-mod-action"));
 		check("no way to its dashboards until the server says the user has them", !$q(".cvt-mod-board"), text(".cvt-mod-hero-side"));

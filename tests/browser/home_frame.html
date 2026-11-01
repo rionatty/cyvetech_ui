@@ -370,8 +370,8 @@
 		check("a row of tabs a keyboard steps through, naming what they show", $q(".cvt-home-tabbar").getAttribute("role") === "tablist" &&
 			tab_button("overview").tabIndex === 0 && tab_button("accounts").tabIndex === -1 &&
 			$q(".cvt-home-tabpanel").getAttribute("aria-labelledby") === "cvt-home-tab-overview", $q(".cvt-home-tabbar").outerHTML.slice(0, 160));
-		check("the overview's heading says what it is, and has no module to open",
-			text(".cvt-home-tabhead h3") === "Overview" && text(".cvt-home-tabhead p") === "The day at a glance, across your modules" && !$q(".cvt-home-into"),
+		check("the overview's heading says what it is, with no line under it and no module to open",
+			text(".cvt-home-tabhead h3") === "Overview" && !$q(".cvt-home-tabhead p") && !$q(".cvt-home-into"),
 			text(".cvt-home-tabhead"));
 		check("the business figures are frames until they are read", $all(".cvt-home-card.cvt-home-frame").length === 4 && !$q(".cvt-home-card-value"),
 			$all(".cvt-home-card").length);
